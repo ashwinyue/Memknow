@@ -518,8 +518,8 @@ pre, code {
 
 .module-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
 }
 
 .module-card {
@@ -551,12 +551,18 @@ pre, code {
 .module-card strong {
   display: block;
   margin-bottom: 8px;
+  font-size: 1rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .module-card p {
   margin: 0;
   color: var(--muted);
   font-size: var(--text-sm);
+  line-height: 1.7;
+  overflow-wrap: anywhere;
 }
 
 .stack {
