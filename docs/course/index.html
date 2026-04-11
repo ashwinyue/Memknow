@@ -177,7 +177,7 @@ pre, code {
 
 .hero {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.08fr 0.92fr;
   gap: 30px;
   align-items: stretch;
 }
@@ -220,10 +220,10 @@ pre, code {
 .hero h1 {
   margin: 18px 0 12px;
   font-family: var(--font-display);
-  font-size: clamp(2.35rem, 5.8vw, 4.3rem);
-  line-height: 1.03;
+  font-size: clamp(2.2rem, 5.1vw, 3.85rem);
+  line-height: 1.05;
   letter-spacing: -0.05em;
-  max-width: 10.5em;
+  max-width: 8.8em;
   text-wrap: balance;
 }
 
@@ -236,8 +236,8 @@ pre, code {
 
 .hero-meta {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
 }
 
 .meta-card {
@@ -249,36 +249,35 @@ pre, code {
 
 .meta-card strong {
   display: block;
-  font-size: 1.4rem;
-  margin-bottom: 4px;
+  font-size: 1.06rem;
+  line-height: 1.35;
+  margin-bottom: 6px;
 }
 
 .meta-card span {
   color: var(--muted);
   font-size: var(--text-sm);
+  line-height: 1.65;
 }
 
 .hero-board {
   background:
-    linear-gradient(180deg, rgba(21, 33, 40, 0.98), rgba(22, 28, 34, 0.94)),
-    var(--code-bg);
-  color: var(--code-fg);
+    radial-gradient(circle at top right, rgba(120, 162, 180, 0.14), transparent 26%),
+    linear-gradient(180deg, rgba(34, 48, 56, 0.96), rgba(40, 52, 59, 0.92));
+  color: #e7eef1;
   border-radius: 30px;
   padding: 26px;
   box-shadow: var(--shadow);
   position: relative;
   overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hero-board::before {
   content: "";
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.4));
+  background: linear-gradient(180deg, rgba(255,255,255,0.04), transparent 28%);
   pointer-events: none;
 }
 
@@ -296,39 +295,45 @@ pre, code {
 .board-badge {
   padding: 5px 10px;
   border-radius: 999px;
-  background: rgba(216, 229, 234, 0.1);
-  color: #9cd3d3;
+  background: rgba(255, 255, 255, 0.09);
+  color: #c6d8de;
 }
 
 .flowline {
   position: relative;
   z-index: 1;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .flowline-card {
-  padding: 14px 16px;
-  border-radius: var(--radius);
-  border: 1px solid rgba(216, 229, 234, 0.14);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 15px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(231, 238, 241, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .flowline-card strong {
   display: block;
   color: #ffffff;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-size: 1.02rem;
+  line-height: 1.35;
 }
 
 .flowline-card span {
-  color: #a7bac1;
+  color: #bfd0d6;
   font-size: var(--text-sm);
+  line-height: 1.65;
 }
 
 .flowline-arrow {
-  height: 24px;
-  margin-left: 20px;
-  border-left: 1px dashed rgba(216, 229, 234, 0.24);
+  height: 16px;
+  width: 2px;
+  margin-left: 18px;
+  border-left: 2px solid rgba(191, 208, 214, 0.22);
+  border-radius: 999px;
 }
 
 .intro-grid,
@@ -792,7 +797,7 @@ pre, code {
   }
 
   .hero h1 {
-    font-size: clamp(2.15rem, 11vw, 3.4rem);
+    font-size: clamp(2rem, 10vw, 3rem);
     line-height: 1.06;
     max-width: none;
   }
