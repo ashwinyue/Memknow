@@ -337,6 +337,19 @@ func looksLikeScheduleIntent(prompt string) bool {
 	return false
 }
 
+// looksLikeScheduleManageIntent guards ManageFromMessage so normal conversation
+// is not hijacked by the schedule manager.
+func looksLikeScheduleManageIntent(prompt string) bool {
+	p := strings.ToLower(prompt)
+	keywords := []string{"提醒", "定时", "schedule", "任务", "cron"}
+	for _, kw := range keywords {
+		if strings.Contains(p, kw) {
+			return true
+		}
+	}
+	return false
+}
+
 func summarizeCommand(command string) string {
 	command = strings.TrimSpace(command)
 	command = strings.TrimSuffix(command, "。")
@@ -400,6 +413,9 @@ func (s *Service) Update(ctx context.Context, scheduleID string, updates map[str
 
 // ManageFromMessage handles natural-language schedule management (list, delete, etc.).
 func (s *Service) ManageFromMessage(ctx context.Context, appCfg *config.AppConfig, msg *feishu.IncomingMessage) (string, bool, error) {
+	if !looksLikeScheduleManageIntent(msg.Prompt) {
+		return "", false, nil
+	}
 	mi, ok, err := s.parseManageIntentWithLLM(ctx, appCfg, msg.Prompt)
 	if err != nil {
 		slog.Warn("schedule: llm manage parse failed", "err", err)

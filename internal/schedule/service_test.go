@@ -353,3 +353,51 @@ func TestService_BootstrapRegistersEnabledSchedules(t *testing.T) {
 		t.Fatalf("jobs len = %d, want 1", len(svc.jobs))
 	}
 }
+
+func TestLooksLikeScheduleManageIntent(t *testing.T) {
+	tests := []struct {
+		prompt string
+		want   bool
+	}{
+		{"我的提醒有哪些", true},
+		{"查看定时任务", true},
+		{"删除喝水提醒", true},
+		{"schedule list", true},
+		{"更新 cron", true},
+		{"那你可以更新下", false},
+		{"看下有什么", false},
+		{"猜下我做什么的", false},
+		{"回答", false},
+	}
+	for _, tt := range tests {
+		if got := looksLikeScheduleManageIntent(tt.prompt); got != tt.want {
+			t.Errorf("looksLikeScheduleManageIntent(%q) = %v, want %v", tt.prompt, got, tt.want)
+		}
+	}
+}
+
+func TestManageFromMessage_GuardRejectsNormalConversation(t *testing.T) {
+	database := openTestDB(t)
+	cfg := &config.Config{Apps: []config.AppConfig{{ID: "app1", WorkspaceDir: t.TempDir()}}}
+	svc, err := NewService(cfg, database, &fakeExecutor{}, nil)
+	if err != nil {
+		t.Fatalf("NewService() error = %v", err)
+	}
+	defer svc.Stop()
+
+	// "看下有什么" should be rejected by the keyword guard and not reach the LLM.
+	reply, ok, err := svc.ManageFromMessage(context.Background(), &cfg.Apps[0], &feishu.IncomingMessage{
+		AppID:    "app1",
+		Prompt:   "看下有什么",
+		SenderID: "ou_user",
+	})
+	if err != nil {
+		t.Fatalf("ManageFromMessage() error = %v", err)
+	}
+	if ok {
+		t.Fatal("ManageFromMessage() ok = true, want false")
+	}
+	if reply != "" {
+		t.Fatalf("ManageFromMessage() reply = %q, want empty", reply)
+	}
+}
