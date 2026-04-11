@@ -344,6 +344,13 @@ pre, code {
   gap: 18px;
 }
 
+.intro-grid > *,
+.split-grid > *,
+.dual-grid > *,
+.tri-grid > * {
+  min-width: 0;
+}
+
 .intro-grid {
   grid-template-columns: 1.15fr 0.85fr;
   margin-top: 22px;
@@ -367,6 +374,7 @@ pre, code {
   border: 1px solid rgba(31, 37, 41, 0.08);
   box-shadow: 0 12px 28px rgba(48, 46, 39, 0.06);
   padding: 22px;
+  min-width: 0;
 }
 
 .card strong.title,
@@ -381,6 +389,7 @@ pre, code {
 .section-intro p {
   margin: 0;
   color: #40505a;
+  overflow-wrap: anywhere;
 }
 
 .chapter-head {
@@ -500,6 +509,7 @@ pre, code {
   border-radius: var(--radius);
   border-left: 4px solid var(--accent);
   background: linear-gradient(180deg, rgba(181, 71, 31, 0.08), rgba(181, 71, 31, 0.04));
+  min-width: 0;
 }
 
 .callout.warn {
@@ -519,6 +529,15 @@ pre, code {
   color: var(--code-fg);
   border: 1px solid rgba(216, 229, 234, 0.08);
   font-size: 0.92rem;
+  min-width: 0;
+  overflow: auto;
+}
+
+.code-block code {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .module-grid {
@@ -652,6 +671,7 @@ pre, code {
   padding: 18px;
   font-family: var(--font-mono);
   font-size: 0.88rem;
+  min-width: 0;
   overflow-x: auto;
 }
 
