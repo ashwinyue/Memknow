@@ -1,12 +1,15 @@
 package workspace
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 
+	"github.com/ashwinyue/Memknow/internal/config"
 	"github.com/ashwinyue/Memknow/internal/model"
 )
 
@@ -14,10 +17,11 @@ import (
 // If a template directory is provided, it copies templates on first init.
 // feishuAppID and feishuAppSecret are kept in the signature for compatibility with
 // existing call sites, but workspace-local feishu credentials are no longer written.
-func Init(workspaceDir string, templateDir string, _, _ string, language string, templateName string) error {
+func Init(workspaceDir string, templateDir string, _, _ string, webSearch config.WebSearchConfig, language string, templateName string) error {
 	// Create required subdirectories.
 	dirs := []string{
 		workspaceDir,
+		filepath.Join(workspaceDir, "bin"),
 		filepath.Join(workspaceDir, "skills"),
 		filepath.Join(workspaceDir, "memory"),
 		filepath.Join(workspaceDir, "sessions"),
@@ -67,6 +71,12 @@ func Init(workspaceDir string, templateDir string, _, _ string, language string,
 	// and all default skills) exist even when no external template dir is configured.
 	if err := writeEmbeddedTemplate(workspaceDir, language, templateName); err != nil {
 		return fmt.Errorf("write embedded template: %w", err)
+	}
+	if err := writeSearchConfig(workspaceDir, webSearch); err != nil {
+		return fmt.Errorf("write search config: %w", err)
+	}
+	if err := writeSearchEntrypoint(workspaceDir); err != nil {
+		return fmt.Errorf("write web-search entrypoint: %w", err)
 	}
 
 	return nil
@@ -119,4 +129,65 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(out, in)
 	return err
+}
+
+func writeSearchConfig(workspaceDir string, cfg config.WebSearchConfig) error {
+	type searchRuntimeConfig struct {
+		Providers      []string `json:"providers"`
+		TimeoutSeconds int      `json:"timeout_seconds"`
+		Tavily         struct {
+			APIKey  string `json:"api_key"`
+			BaseURL string `json:"base_url"`
+		} `json:"tavily"`
+	}
+
+	timeout := cfg.TimeoutSeconds
+	if timeout <= 0 {
+		timeout = 15
+	}
+	baseURL := cfg.TavilyBaseURL
+	if baseURL == "" {
+		baseURL = "https://api.tavily.com/search"
+	}
+
+	runtimeCfg := searchRuntimeConfig{
+		Providers:      []string{"tavily", "duckduckgo"},
+		TimeoutSeconds: timeout,
+	}
+	runtimeCfg.Tavily.APIKey = cfg.TavilyAPIKey
+	runtimeCfg.Tavily.BaseURL = baseURL
+
+	data, err := json.MarshalIndent(runtimeCfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	return os.WriteFile(filepath.Join(workspaceDir, ".search.json"), data, 0o600)
+}
+
+func writeSearchEntrypoint(workspaceDir string) error {
+	execPath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	quotedExec := shellQuote(execPath)
+	script := fmt.Sprintf(`#!/bin/sh
+set -eu
+
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+WORKSPACE_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+
+exec %s web-search --config "$WORKSPACE_DIR/.search.json" "$@"
+`, quotedExec)
+
+	path := filepath.Join(workspaceDir, "bin", "web-search")
+	if err := os.WriteFile(path, []byte(script), 0o755); err != nil {
+		return err
+	}
+	return nil
+}
+
+func shellQuote(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
 }

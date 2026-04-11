@@ -25,6 +25,11 @@ heartbeat:
   notify_target_type: "" # p2p / group
   notify_target_id: ""   # p2p=open_id(或oc_xxx chat_id), group=chat_id
 
+web_search:
+  tavily_api_key: ""
+  tavily_base_url: "https://api.tavily.com/search"
+  timeout_seconds: 15
+
 language: "zh"
 
 apps:

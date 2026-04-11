@@ -38,11 +38,14 @@ internal/workspace/template/
 
 ```text
 <workspace_dir>/
+├── bin/
+│   └── web-search
 ├── SOUL.md
 ├── IDENTITY.md
 ├── USER.md
 ├── MEMORY.md
 ├── HEARTBEAT.md
+├── .search.json
 ├── skills/
 ├── memory/
 ├── sessions/
@@ -61,6 +64,8 @@ internal/workspace/template/
 | `USER.md` | 用户偏好与关系上下文 |
 | `MEMORY.md` | 当前最重要的长期记忆入口 |
 | `HEARTBEAT.md` | heartbeat 自检 checklist |
+| `bin/web-search` | workspace 内统一联网搜索入口 |
+| `.search.json` | 由全局 `config.yaml` 派生的搜索运行时配置 |
 | `skills/*.md` | 场景特定操作规范 |
 
 框架级 prompt 位于：
@@ -111,6 +116,12 @@ internal/workspace/template/
 ### 5.3 调整平台规则
 
 应修改 `internal/claude/prompts/*.md`，而不是把平台级安全规则复制到每个 workspace 的 `SOUL.md` 中。
+
+### 5.4 调整本地搜索能力
+
+- 搜索实现位于 `internal/websearch/`
+- workspace 初始化时会生成 `.search.json` 与 `bin/web-search`
+- 模板中的 `skills/search.md` 和 `SOUL.md` 负责告诉 bot 优先使用本地搜索入口
 
 ---
 

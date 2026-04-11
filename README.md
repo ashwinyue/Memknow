@@ -68,7 +68,7 @@ cp config.yaml.template config.yaml
 
 ### Agent 能力
 
-- **Claude Code 全能力**：Read / Edit / Write / Bash / WebFetch / WebSearch 等工具直接可用。
+- **Claude Code 全能力**：Read / Edit / Write / Bash / WebFetch 等工具直接可用；workspace 还内置了本地 `bin/web-search` 搜索入口，优先走 Tavily，未配置时自动降级 DuckDuckGo。
 - **附件支持**：图片、文件自动下载至 session 目录；纯附件消息智能缓存，等待用户说明意图后合并处理。
 - **定时任务**：对话式创建 schedule，内置 `gocron` 调度器直接执行，无需手写 YAML。
 - **内置心跳**：heartbeat 由框架内置调度器管理，按 `config.yaml` 周期触发，自动读取 `HEARTBEAT.md` 执行自省任务。
@@ -149,6 +149,19 @@ Memknow/
 ├── Makefile                    # 常用命令封装
 └── go.mod
 ```
+
+### 本地搜索入口
+
+每个 workspace 初始化时都会生成：
+
+- `bin/web-search`：bot 可直接调用的统一搜索命令
+- `.search.json`：由 `config.yaml` 派生出的运行时搜索配置
+
+默认行为：
+
+- 配置了 `web_search.tavily_api_key` 时优先使用 Tavily
+- 未配置或 Tavily 失败时自动降级到 DuckDuckGo
+- 返回统一 JSON，便于 bot 继续读取和处理
 
 ---
 

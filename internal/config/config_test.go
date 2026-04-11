@@ -127,6 +127,10 @@ func TestAllowedChat(t *testing.T) {
 
 func TestLoad_ValidYAML(t *testing.T) {
 	yaml := `
+web_search:
+  tavily_api_key: "tvly-secret"
+  tavily_base_url: "https://api.tavily.com/search"
+  timeout_seconds: 22
 apps:
   - id: "test-app"
     feishu_app_id: "cli_xxx"
@@ -165,6 +169,15 @@ heartbeat:
 
 	if cfg.Server.Port != 9090 {
 		t.Errorf("port = %d, want 9090", cfg.Server.Port)
+	}
+	if cfg.WebSearch.TavilyAPIKey != "tvly-secret" {
+		t.Errorf("web_search.tavily_api_key = %q, want tvly-secret", cfg.WebSearch.TavilyAPIKey)
+	}
+	if cfg.WebSearch.TavilyBaseURL != "https://api.tavily.com/search" {
+		t.Errorf("web_search.tavily_base_url = %q, want https://api.tavily.com/search", cfg.WebSearch.TavilyBaseURL)
+	}
+	if cfg.WebSearch.TimeoutSeconds != 22 {
+		t.Errorf("web_search.timeout_seconds = %d, want 22", cfg.WebSearch.TimeoutSeconds)
 	}
 	if len(cfg.Apps) != 1 {
 		t.Fatalf("apps = %d, want 1", len(cfg.Apps))
@@ -259,6 +272,12 @@ apps:
 	}
 	if cfg.Claude.MaxTurns != 20 {
 		t.Errorf("default max_turns = %d, want 20", cfg.Claude.MaxTurns)
+	}
+	if cfg.WebSearch.TavilyBaseURL != "https://api.tavily.com/search" {
+		t.Errorf("default tavily_base_url = %q, want https://api.tavily.com/search", cfg.WebSearch.TavilyBaseURL)
+	}
+	if cfg.WebSearch.TimeoutSeconds != 15 {
+		t.Errorf("default web_search.timeout_seconds = %d, want 15", cfg.WebSearch.TimeoutSeconds)
 	}
 	if cfg.Session.WorkerIdleTimeoutMinutes != 30 {
 		t.Errorf("default idle_timeout = %d, want 30", cfg.Session.WorkerIdleTimeoutMinutes)

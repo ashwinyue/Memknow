@@ -62,6 +62,11 @@ heartbeat:
   enabled: false                        # 是否开启内置 heartbeat
   interval_minutes: 720                 # 触发间隔（分钟）
   prompt_file: "HEARTBEAT.md"           # workspace 根目录中的 prompt 文件
+
+web_search:
+  tavily_api_key: ""                    # 可选；配置后 bot 优先走 Tavily 搜索
+  tavily_base_url: "https://api.tavily.com/search"
+  timeout_seconds: 15
 ```
 
 ---
@@ -88,7 +93,7 @@ heartbeat:
 |------|------|------|
 | `permission_mode` | string | `acceptEdits` 自动接受文件编辑；`bypassPermissions` 跳过所有确认（高风险） |
 | `model` | string | 可选，原样传给 claude CLI 的 `--model` |
-| `allowed_tools` | []string | 限制 Claude 可用工具，建议按最小权限原则配置 |
+| `allowed_tools` | []string | 限制 Claude 可用工具，建议按最小权限原则配置。联网检索默认优先使用 workspace 的 `bin/web-search`，不是依赖内置 `WebSearch` |
 
 ### `server`
 
@@ -126,6 +131,14 @@ heartbeat:
 | `prompt_file` | string | workspace 根目录中读取的 prompt 文件名 |
 | `notify_target_type` | string | 通知目标类型：`p2p` / `group`，空表示不发送通知 |
 | `notify_target_id` | string | 通知目标 ID |
+
+### `web_search`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `tavily_api_key` | string | Tavily API Key；留空则自动降级到 DuckDuckGo |
+| `tavily_base_url` | string | Tavily API 地址 |
+| `timeout_seconds` | int | workspace 本地搜索脚本的 HTTP 超时 |
 
 ---
 

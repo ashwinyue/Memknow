@@ -1,17 +1,20 @@
 package workspace
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ashwinyue/Memknow/internal/config"
 )
 
 func TestInit_CreatesRequiredDirs(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -31,7 +34,7 @@ func TestInit_CreatesMemoryLock(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -45,7 +48,7 @@ func TestInit_CreatesSkillLock(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -59,7 +62,7 @@ func TestInit_DoesNotOverwriteExistingLock(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -69,7 +72,7 @@ func TestInit_DoesNotOverwriteExistingLock(t *testing.T) {
 	}
 
 	// Second Init should not erase the existing lock content.
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("second Init() error = %v", err)
 	}
 
@@ -87,7 +90,7 @@ func TestInit_Idempotent(t *testing.T) {
 	workspaceDir := filepath.Join(dir, "workspace")
 
 	for range 3 {
-		if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+		if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 			t.Fatalf("Init() error = %v", err)
 		}
 	}
@@ -115,7 +118,7 @@ func TestInit_CopiesTemplate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Init(workspaceDir, templateRoot, "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, templateRoot, "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -154,7 +157,7 @@ func TestInit_TemplateDoesNotOverwriteExisting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Init(workspaceDir, templateRoot, "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, templateRoot, "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -171,7 +174,7 @@ func TestInit_DoesNotWriteFeishuConfig(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -185,7 +188,7 @@ func TestInit_WikiScaffoldFilesExist(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -220,7 +223,7 @@ func TestCopyTemplate_SkipsSymlinks(t *testing.T) {
 		t.Skip("symlinks not supported on this platform")
 	}
 
-	if err := Init(workspaceDir, templateRoot, "", "", "zh", "default"); err != nil {
+	if err := Init(workspaceDir, templateRoot, "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -237,7 +240,7 @@ func TestInit_ProductAssistantTemplateOverridesDefaultFiles(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "product-assistant"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "product-assistant"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 
@@ -258,11 +261,97 @@ func TestInit_ProductAssistantTemplateOverridesDefaultFiles(t *testing.T) {
 	}
 }
 
+func TestInit_WritesSearchConfigAndSkill(t *testing.T) {
+	dir := t.TempDir()
+	workspaceDir := filepath.Join(dir, "workspace")
+
+	searchCfg := config.WebSearchConfig{
+		TavilyAPIKey:   "tvly-secret",
+		TavilyBaseURL:  "https://api.tavily.com/search",
+		TimeoutSeconds: 12,
+	}
+
+	if err := Init(workspaceDir, "", "", "", searchCfg, "zh", "default"); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+
+	scriptPath := filepath.Join(workspaceDir, "bin", "web-search")
+	scriptData, err := os.ReadFile(scriptPath)
+	if err != nil {
+		t.Fatalf("expected search script to exist: %v", err)
+	}
+	if !strings.Contains(string(scriptData), "web-search --config") {
+		t.Fatalf("search script should call server web-search subcommand, got:\n%s", string(scriptData))
+	}
+
+	skillPath := filepath.Join(workspaceDir, "skills", "search.md")
+	skillData, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatalf("read search skill: %v", err)
+	}
+	if !strings.Contains(string(skillData), "bin/web-search") {
+		t.Fatalf("search skill should mention bin/web-search, got:\n%s", string(skillData))
+	}
+
+	rawCfg, err := os.ReadFile(filepath.Join(workspaceDir, ".search.json"))
+	if err != nil {
+		t.Fatalf("read .search.json: %v", err)
+	}
+	var got struct {
+		Tavily struct {
+			APIKey  string `json:"api_key"`
+			BaseURL string `json:"base_url"`
+		} `json:"tavily"`
+		TimeoutSeconds int `json:"timeout_seconds"`
+	}
+	if err := json.Unmarshal(rawCfg, &got); err != nil {
+		t.Fatalf("unmarshal .search.json: %v", err)
+	}
+	if got.Tavily.APIKey != "tvly-secret" {
+		t.Fatalf("tavily api key = %q, want tvly-secret", got.Tavily.APIKey)
+	}
+	if got.Tavily.BaseURL != "https://api.tavily.com/search" {
+		t.Fatalf("tavily base_url = %q, want https://api.tavily.com/search", got.Tavily.BaseURL)
+	}
+	if got.TimeoutSeconds != 12 {
+		t.Fatalf("timeout_seconds = %d, want 12", got.TimeoutSeconds)
+	}
+}
+
+func TestInit_WritesDDGFallbackWhenTavilyMissing(t *testing.T) {
+	dir := t.TempDir()
+	workspaceDir := filepath.Join(dir, "workspace")
+
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
+		t.Fatalf("Init() error = %v", err)
+	}
+
+	rawCfg, err := os.ReadFile(filepath.Join(workspaceDir, ".search.json"))
+	if err != nil {
+		t.Fatalf("read .search.json: %v", err)
+	}
+	var got struct {
+		Tavily struct {
+			APIKey string `json:"api_key"`
+		} `json:"tavily"`
+		Providers []string `json:"providers"`
+	}
+	if err := json.Unmarshal(rawCfg, &got); err != nil {
+		t.Fatalf("unmarshal .search.json: %v", err)
+	}
+	if got.Tavily.APIKey != "" {
+		t.Fatalf("expected empty tavily api key, got %q", got.Tavily.APIKey)
+	}
+	if len(got.Providers) != 2 || got.Providers[0] != "tavily" || got.Providers[1] != "duckduckgo" {
+		t.Fatalf("providers = %v, want [tavily duckduckgo]", got.Providers)
+	}
+}
+
 func TestInit_CodeReviewTemplateOverridesDefaultFiles(t *testing.T) {
 	dir := t.TempDir()
 	workspaceDir := filepath.Join(dir, "workspace")
 
-	if err := Init(workspaceDir, "", "", "", "zh", "code-review"); err != nil {
+	if err := Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "code-review"); err != nil {
 		t.Fatalf("Init() error = %v", err)
 	}
 

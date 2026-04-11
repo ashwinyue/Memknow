@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ashwinyue/Memknow/internal/config"
 	"github.com/ashwinyue/Memknow/internal/workspace"
 )
 
@@ -16,7 +17,7 @@ func TestEndToEnd_SkillLoading(t *testing.T) {
 	workspaceDir := filepath.Join(tmp, "workspace")
 
 	// 1. Bootstrap workspace using embedded templates (no external template dir)
-	if err := workspace.Init(workspaceDir, "", "", "", "zh", "default"); err != nil {
+	if err := workspace.Init(workspaceDir, "", "", "", config.WebSearchConfig{}, "zh", "default"); err != nil {
 		t.Fatalf("init workspace: %v", err)
 	}
 

@@ -19,6 +19,7 @@ type Config struct {
 	Session   SessionConfig   `mapstructure:"session"`
 	Cleanup   CleanupConfig   `mapstructure:"cleanup"`
 	Heartbeat HeartbeatConfig `mapstructure:"heartbeat"`
+	WebSearch WebSearchConfig `mapstructure:"web_search"`
 	// Language selects the workspace template language. Supported: "zh", "en". Defaults to "zh".
 	Language string `mapstructure:"language"`
 	// DBPath is the absolute path to bot.db, set at runtime after db.Open().
@@ -161,6 +162,12 @@ type HeartbeatConfig struct {
 	NotifyTargetID   string `mapstructure:"notify_target_id"`   // open_id or chat_id
 }
 
+type WebSearchConfig struct {
+	TavilyAPIKey   string `mapstructure:"tavily_api_key"`
+	TavilyBaseURL  string `mapstructure:"tavily_base_url"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds"`
+}
+
 // Validate checks that all required fields are populated.
 // Call this immediately after Load to catch misconfiguration at startup.
 func (c *Config) Validate() error {
@@ -227,6 +234,9 @@ func Load(path string, watch bool) (*Config, error) {
 	v.SetDefault("heartbeat.prompt_file", "HEARTBEAT.md")
 	v.SetDefault("heartbeat.notify_target_type", "")
 	v.SetDefault("heartbeat.notify_target_id", "")
+	v.SetDefault("web_search.tavily_api_key", "")
+	v.SetDefault("web_search.tavily_base_url", "https://api.tavily.com/search")
+	v.SetDefault("web_search.timeout_seconds", 15)
 	v.SetDefault("language", "zh")
 	v.SetDefault("apps", []map[string]any{})
 

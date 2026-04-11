@@ -407,11 +407,14 @@ Heartbeat 不依赖 YAML task 文件。
 
 ```text
 <workspace_dir>/
+├── bin/
+│   └── web-search
 ├── SOUL.md
 ├── IDENTITY.md
 ├── USER.md
 ├── MEMORY.md
 ├── HEARTBEAT.md
+├── .search.json
 ├── skills/
 ├── memory/
 ├── sessions/
@@ -430,11 +433,12 @@ internal/config/             配置加载与校验
 internal/db/                 SQLite 初始化
 internal/model/              GORM 模型
 internal/feishu/             飞书接入与回消息
-internal/session/            Worker、检索、摘要、搜索
+internal/session/            Worker、历史检索、摘要
 internal/claude/             Claude CLI interactive executor
 internal/schedule/           定时任务服务
 internal/heartbeat/          心跳服务
 internal/cleanup/            附件清理
+internal/websearch/          本地联网搜索（Tavily / DuckDuckGo）
 internal/workspace/          workspace 初始化与模板
 ```
 
@@ -449,6 +453,7 @@ internal/workspace/          workspace 初始化与模板
 - `claude.max_turns`
 - `session.worker_idle_timeout_minutes`
 - `heartbeat.enabled / interval_minutes / prompt_file / notify_target_*`
+- `web_search.tavily_api_key / tavily_base_url / timeout_seconds`
 - `cleanup.*`
 
 `Claude CLI` 的认证、base URL 等运行环境由用户本机的 Claude 配置管理，Memknow 不额外落本地凭证文件。

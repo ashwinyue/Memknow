@@ -24,6 +24,7 @@ Memknow/
 │   ├── heartbeat/              # 内置 heartbeat 调度
 │   ├── schedule/               # 内置 schedule 调度（自然语言创建/管理）
 │   ├── cleanup/                # 附件清理服务
+│   ├── websearch/              # 本地联网搜索（Tavily / DuckDuckGo）
 │   └── workspace/              # workspace 目录初始化
 ├── internal/workspace/template/ # 新 workspace 默认模板（内嵌到二进制中）
 ├── workspaces/                 # 运行时 workspace 实例
@@ -80,6 +81,8 @@ Each app workspace contains:
 - `USER.md` (generated from embedded default if missing)
 - `MEMORY.md` (generated from embedded default if missing)
 - `HEARTBEAT.md` (generated from embedded default if missing)
+- `bin/web-search` (generated local web search entrypoint)
+- `.search.json` (derived runtime search config from global `config.yaml`)
 - `skills/` (generated from embedded defaults if missing)
 - `memory/`
 - `sessions/`
@@ -99,6 +102,11 @@ Each app workspace contains:
   - `config.yaml.template`
   - `internal/workspace/prompts/zh/HEARTBEAT.md` and `internal/workspace/prompts/en/HEARTBEAT.md`
   - any task docs that mention heartbeat
+- When changing local web search behavior, update:
+  - `internal/websearch`
+  - `internal/workspace`
+  - `config.yaml.template`
+  - related docs and workspace skills
 - New reminder/schedule creation must not depend on writing YAML files from agent prompts.
 
 ## Verification

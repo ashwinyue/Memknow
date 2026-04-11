@@ -68,7 +68,7 @@ For daemon mode and detailed deployment instructions, see `docs/quickstart.md`.
 
 ### Agent Capabilities
 
-- **Full Claude Code power**: Read / Edit / Write / Bash / WebFetch / WebSearch tools are available out of the box.
+- **Full Claude Code power**: Read / Edit / Write / Bash / WebFetch are available out of the box; each workspace also includes a local `bin/web-search` entrypoint that prefers Tavily and falls back to DuckDuckGo.
 - **Attachment support**: Images and files auto-download to session directories; pure-attachment messages are smart-cached until the user describes their intent.
 - **Scheduled tasks**: Create schedules via natural language; the built-in `gocron` scheduler executes directly — no YAML needed.
 - **Built-in heartbeat**: Framework-managed maintenance loop triggered by `config.yaml`, automatically reading `HEARTBEAT.md` for self-check tasks.
@@ -149,6 +149,19 @@ Memknow/
 ├── Makefile                    # Common task wrappers
 └── go.mod
 ```
+
+### Local Search Entrypoint
+
+Each workspace is initialized with:
+
+- `bin/web-search`: a unified local search command the bot can call directly
+- `.search.json`: runtime search config derived from `config.yaml`
+
+Default behavior:
+
+- Prefer Tavily when `web_search.tavily_api_key` is configured
+- Fall back to DuckDuckGo when Tavily is missing or fails
+- Return normalized JSON for the bot to inspect and continue from
 
 ---
 

@@ -23,10 +23,19 @@ import (
 	"github.com/ashwinyue/Memknow/internal/model"
 	schedulepkg "github.com/ashwinyue/Memknow/internal/schedule"
 	"github.com/ashwinyue/Memknow/internal/session"
+	"github.com/ashwinyue/Memknow/internal/websearch"
 	"github.com/ashwinyue/Memknow/internal/workspace"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "web-search" {
+		if err := websearch.RunCLI(os.Args[2:]); err != nil {
+			slog.Error("web-search", "err", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	configPath := flag.String("config", "config.yaml", "path to config.yaml")
 	flag.Parse()
 
@@ -69,7 +78,7 @@ func main() {
 	// Templates are embedded in the binary (internal/workspace/template).
 	// External template directories can still be passed via the second argument.
 	for _, appCfg := range cfg.Apps {
-		if err := workspace.Init(appCfg.WorkspaceDir, "", appCfg.FeishuAppID, appCfg.FeishuAppSecret, cfg.Language, appCfg.NormalizedWorkspaceTemplate()); err != nil {
+		if err := workspace.Init(appCfg.WorkspaceDir, "", appCfg.FeishuAppID, appCfg.FeishuAppSecret, cfg.WebSearch, cfg.Language, appCfg.NormalizedWorkspaceTemplate()); err != nil {
 			slog.Error("init workspace", "app", appCfg.ID, "err", err)
 			os.Exit(1)
 		}
