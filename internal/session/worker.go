@@ -451,7 +451,12 @@ func (w *Worker) interceptScheduleOps(ctx context.Context, sess *model.Session, 
 	if handled, err := w.maybeCreateSchedule(ctx, sess, msg, originalPrompt); handled {
 		return true, err
 	}
-	if handled, err := w.maybeManageSchedule(ctx, sess, msg); handled {
+	// Use originalPrompt so injected context/memories do not trigger false schedule intents.
+	saved := msg.Prompt
+	msg.Prompt = originalPrompt
+	handled, err := w.maybeManageSchedule(ctx, sess, msg)
+	msg.Prompt = saved
+	if handled {
 		return true, err
 	}
 	return false, nil
