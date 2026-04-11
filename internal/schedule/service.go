@@ -220,7 +220,7 @@ func (s *Service) runNow(ctx context.Context, sched *model.Schedule) error {
 	if !ok {
 		return fmt.Errorf("unknown app: %s", sched.AppID)
 	}
-	channelKey := feishu.BuildChannelKey(sched.TargetType, sched.TargetID, "", appCfg.ID)
+	channelKey := fmt.Sprintf("schedule:%s:%s:%s", sched.TargetType, sched.TargetID, appCfg.ID)
 	s.ensureChannel(channelKey, sched, appCfg.ID)
 
 	sessionID := uuid.New().String()

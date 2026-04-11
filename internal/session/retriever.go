@@ -24,10 +24,10 @@ func NewRetriever(db *gorm.DB) *Retriever {
 func (r *Retriever) Retrieve(channelKey, query string) (ContextPayload, error) {
 	payload := ContextPayload{}
 
-	// 1. Recent session summaries for this channel.
-	if err := r.db.Where("channel_key = ?", channelKey).
+	// 1. Recent session summaries for this channel (chat only, limit 3).
+	if err := r.db.Where("channel_key = ? AND session_id IN (SELECT id FROM sessions WHERE type = ?)", channelKey, model.SessionTypeChat).
 		Order("created_at DESC").
-		Limit(5).
+		Limit(3).
 		Find(&payload.Summaries).Error; err != nil {
 		return payload, fmt.Errorf("load summaries: %w", err)
 	}
@@ -39,8 +39,8 @@ func (r *Retriever) Retrieve(channelKey, query string) (ContextPayload, error) {
 
 	var candidates []scoredMatch
 
-	// Route A: FTS5 route (fast exact-ish recall).
-	fts, err := searchMessagesWithStatus(r.db, channelKey, q, statusArchived, 12)
+	// Route A: FTS5 route (fast exact-ish recall), chat only.
+	fts, err := searchMessagesWithStatus(r.db, channelKey, q, statusArchived, model.SessionTypeChat, 12)
 	if err != nil {
 		return payload, fmt.Errorf("search archived messages by fts: %w", err)
 	}
@@ -48,8 +48,8 @@ func (r *Retriever) Retrieve(channelKey, query string) (ContextPayload, error) {
 		candidates = append(candidates, scoredMatch{match: m, score: 100 - i})
 	}
 
-	// Route B: LIKE fallback route (covers Chinese better when tokenizer is weak).
-	likeMatches, err := searchMessagesLikeWithStatus(r.db, channelKey, q, statusArchived, 12)
+	// Route B: LIKE fallback route (covers Chinese better when tokenizer is weak), chat only.
+	likeMatches, err := searchMessagesLikeWithStatus(r.db, channelKey, q, statusArchived, model.SessionTypeChat, 12)
 	if err != nil {
 		return payload, fmt.Errorf("search archived messages by like: %w", err)
 	}
@@ -57,8 +57,8 @@ func (r *Retriever) Retrieve(channelKey, query string) (ContextPayload, error) {
 		candidates = append(candidates, scoredMatch{match: m, score: 70 - i})
 	}
 
-	// Route C: summary route (session-level recall even if message-level miss).
-	summaryMatches, err := searchSummaryMatches(r.db, channelKey, q, 8)
+	// Route C: summary route (session-level recall even if message-level miss), chat only.
+	summaryMatches, err := searchSummaryMatches(r.db, channelKey, q, model.SessionTypeChat, 8)
 	if err != nil {
 		return payload, fmt.Errorf("search session summaries: %w", err)
 	}
@@ -76,7 +76,7 @@ type scoredMatch struct {
 	score int
 }
 
-func searchMessagesLikeWithStatus(db *gorm.DB, channelKey, query, statusFilter string, limit int) ([]SearchMatch, error) {
+func searchMessagesLikeWithStatus(db *gorm.DB, channelKey, query, statusFilter, sessionType string, limit int) ([]SearchMatch, error) {
 	if strings.TrimSpace(query) == "" || limit <= 0 {
 		return nil, nil
 	}
@@ -92,6 +92,10 @@ WHERE s.channel_key = ? AND lower(m.content) LIKE ?`
 	if statusFilter != "" {
 		sql += " AND s.status = ?"
 		args = append(args, statusFilter)
+	}
+	if sessionType != "" {
+		sql += " AND s.type = ?"
+		args = append(args, sessionType)
 	}
 	sql += `
 ORDER BY m.created_at DESC
@@ -114,7 +118,7 @@ LIMIT ?`
 	return matches, nil
 }
 
-func searchSummaryMatches(db *gorm.DB, channelKey, query string, limit int) ([]SearchMatch, error) {
+func searchSummaryMatches(db *gorm.DB, channelKey, query, sessionType string, limit int) ([]SearchMatch, error) {
 	if strings.TrimSpace(query) == "" || limit <= 0 {
 		return nil, nil
 	}
@@ -126,13 +130,22 @@ func searchSummaryMatches(db *gorm.DB, channelKey, query string, limit int) ([]S
 		Content      string    `gorm:"column:content"`
 		CreatedAt    time.Time `gorm:"column:created_at"`
 	}
-	err := db.Raw(`
+	sql := `
 SELECT ss.session_id AS session_id, s.title AS session_title, ss.content AS content, ss.created_at AS created_at
 FROM session_summaries ss
 LEFT JOIN sessions s ON s.id = ss.session_id
-WHERE ss.channel_key = ? AND lower(ss.content) LIKE ?
+WHERE ss.channel_key = ? AND lower(ss.content) LIKE ?`
+	args := []any{channelKey, pattern}
+	if sessionType != "" {
+		sql += " AND s.type = ?"
+		args = append(args, sessionType)
+	}
+	sql += `
 ORDER BY ss.created_at DESC
-LIMIT ?`, channelKey, pattern, limit).Scan(&rows).Error
+LIMIT ?`
+	args = append(args, limit)
+
+	err := db.Raw(sql, args...).Scan(&rows).Error
 	if err != nil {
 		return nil, err
 	}

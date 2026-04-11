@@ -29,44 +29,43 @@ type SearchMatch struct {
 
 // searchMessages performs an FTS5 search across messages for a given channel.
 func searchMessages(db *gorm.DB, channelKey, query string, limit int) ([]SearchMatch, error) {
-	return searchMessagesWithStatus(db, channelKey, query, "", limit)
+	return searchMessagesWithStatus(db, channelKey, query, "", "", limit)
 }
 
-// searchMessagesWithStatus performs an FTS5 search with optional session status filter.
-// Empty statusFilter means search all sessions.
-func searchMessagesWithStatus(db *gorm.DB, channelKey, query, statusFilter string, limit int) ([]SearchMatch, error) {
+// searchMessagesWithStatus performs an FTS5 search with optional session status and type filter.
+// Empty statusFilter or sessionType means do not filter on that field.
+func searchMessagesWithStatus(db *gorm.DB, channelKey, query, statusFilter, sessionType string, limit int) ([]SearchMatch, error) {
 	sanitized := sanitizeFTS5Query(query)
 	if sanitized == "" {
 		return nil, nil
 	}
 
-	var sql string
+	var conditions []string
 	var args []any
+
+	conditions = append(conditions, "messages_fts MATCH ?", "s.channel_key = ?")
+	args = append(args, sanitized, channelKey)
+
 	if statusFilter != "" {
-		sql = `
-SELECT m.*, m.rowid AS rowid, s.id AS session_id, s.title AS session_title,
-       bm25(messages_fts) AS rank_score,
-       snippet(messages_fts, 0, '>>>', '<<<', '...', 32) AS snippet
-FROM messages_fts
-JOIN messages m ON m.rowid = messages_fts.rowid
-JOIN sessions s ON s.id = m.session_id
-WHERE messages_fts MATCH ? AND s.channel_key = ? AND s.status = ?
-ORDER BY rank_score ASC
-LIMIT ?`
-		args = []any{sanitized, channelKey, statusFilter, limit}
-	} else {
-		sql = `
-SELECT m.*, m.rowid AS rowid, s.id AS session_id, s.title AS session_title,
-       bm25(messages_fts) AS rank_score,
-       snippet(messages_fts, 0, '>>>', '<<<', '...', 32) AS snippet
-FROM messages_fts
-JOIN messages m ON m.rowid = messages_fts.rowid
-JOIN sessions s ON s.id = m.session_id
-WHERE messages_fts MATCH ? AND s.channel_key = ?
-ORDER BY rank_score ASC
-LIMIT ?`
-		args = []any{sanitized, channelKey, limit}
+		conditions = append(conditions, "s.status = ?")
+		args = append(args, statusFilter)
 	}
+	if sessionType != "" {
+		conditions = append(conditions, "s.type = ?")
+		args = append(args, sessionType)
+	}
+
+	sql := fmt.Sprintf(`
+SELECT m.*, m.rowid AS rowid, s.id AS session_id, s.title AS session_title,
+       bm25(messages_fts) AS rank_score,
+       snippet(messages_fts, 0, '>>>', '<<<', '...', 32) AS snippet
+FROM messages_fts
+JOIN messages m ON m.rowid = messages_fts.rowid
+JOIN sessions s ON s.id = m.session_id
+WHERE %s
+ORDER BY rank_score ASC
+LIMIT ?`, strings.Join(conditions, " AND "))
+	args = append(args, limit)
 
 	var matches []SearchMatch
 	rows, err := db.Raw(sql, args...).Rows()

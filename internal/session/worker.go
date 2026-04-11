@@ -315,7 +315,7 @@ func probeSessionID(msg *feishu.IncomingMessage) string {
 	if msg == nil {
 		return "probe:unknown"
 	}
-	return "probe:" + msg.ChannelKey
+	return fmt.Sprintf("probe:%s:%s", msg.ChannelKey, msg.MessageID)
 }
 
 func (w *Worker) handleBuiltInCommands(ctx context.Context, msg *feishu.IncomingMessage, trimmed string) bool {
@@ -640,7 +640,7 @@ func (w *Worker) persistResult(sess *model.Session, result *claude.ExecuteResult
 	updates := map[string]interface{}{
 		"updated_at": time.Now(),
 	}
-	if result.ClaudeSessionID != "" && sess.ClaudeSessionID == "" {
+	if result.ClaudeSessionID != "" {
 		updates["claude_session_id"] = result.ClaudeSessionID
 	}
 	if result.InputTokens > 0 {
@@ -906,14 +906,14 @@ func (w *Worker) handleSearch(ctx context.Context, msg *feishu.IncomingMessage, 
 		return
 	}
 
-	matches, err := searchMessages(w.db, w.channelKey, query, 5)
+	matches, err := searchMessagesWithStatus(w.db, w.channelKey, query, "", model.SessionTypeChat, 5)
 	if err != nil {
 		slog.Error("search messages", "err", err)
 		_, _ = w.sender.SendText(ctx, msg.ReceiveID, msg.ReceiveType, "搜索失败，请稍后重试")
 		return
 	}
 	if len(matches) < 5 {
-		likeMatches, likeErr := searchMessagesLikeWithStatus(w.db, w.channelKey, query, "", 5)
+		likeMatches, likeErr := searchMessagesLikeWithStatus(w.db, w.channelKey, query, "", model.SessionTypeChat, 5)
 		if likeErr != nil {
 			slog.Warn("search messages fallback like failed", "err", likeErr)
 		} else {

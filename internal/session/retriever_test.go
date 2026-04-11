@@ -163,3 +163,88 @@ func TestRetriever_Retrieve_SummaryRecallWhenNoMessageHit(t *testing.T) {
 		t.Fatalf("expected summary-derived match in payload")
 	}
 }
+
+func TestRetriever_Retrieve_IgnoresNonChatSessions(t *testing.T) {
+	testDB, err := db.Open(":memory:")
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+
+	channelKey := "group:test:mixed"
+	chatSessID := uuid.New().String()
+	scheduleSessID := uuid.New().String()
+
+	testDB.Create(&model.Session{
+		ID:         chatSessID,
+		ChannelKey: channelKey,
+		Type:       model.SessionTypeChat,
+		Status:     statusArchived,
+		Title:      "聊天会话",
+		CreatedAt:  time.Now(),
+	})
+	testDB.Create(&model.Session{
+		ID:         scheduleSessID,
+		ChannelKey: channelKey,
+		Type:       model.SessionTypeSchedule,
+		Status:     statusArchived,
+		Title:      "定时任务会话",
+		CreatedAt:  time.Now(),
+	})
+
+	testDB.Create(&model.SessionSummary{
+		ID:         uuid.New().String(),
+		SessionID:  chatSessID,
+		ChannelKey: channelKey,
+		Content:    "聊天里提到 deploy script 在 scripts/deploy.sh。",
+		CreatedAt:  time.Now(),
+	})
+	testDB.Create(&model.SessionSummary{
+		ID:         uuid.New().String(),
+		SessionID:  scheduleSessID,
+		ChannelKey: channelKey,
+		Content:    "定时任务执行过 deploy script 并广播结果。",
+		CreatedAt:  time.Now(),
+	})
+
+	testDB.Create(&model.Message{
+		ID:        uuid.New().String(),
+		SessionID: chatSessID,
+		Role:      "user",
+		Content:   "deploy script 在 scripts/deploy.sh",
+		CreatedAt: time.Now(),
+	})
+	testDB.Create(&model.Message{
+		ID:        uuid.New().String(),
+		SessionID: scheduleSessID,
+		Role:      "assistant",
+		Content:   "定时任务自动执行 deploy script 并推送提醒",
+		CreatedAt: time.Now(),
+	})
+
+	r := NewRetriever(testDB)
+	payload, err := r.Retrieve(channelKey, "deploy script")
+	if err != nil {
+		t.Fatalf("Retrieve failed: %v", err)
+	}
+
+	if len(payload.Summaries) != 1 {
+		t.Fatalf("Summaries count = %d, want 1", len(payload.Summaries))
+	}
+	if payload.Summaries[0].SessionID != chatSessID {
+		t.Fatalf("summary session = %s, want chat session %s", payload.Summaries[0].SessionID, chatSessID)
+	}
+
+	if len(payload.Matches) == 0 {
+		t.Fatalf("expected at least one match from chat session")
+	}
+	for _, m := range payload.Matches {
+		if m.SessionID != chatSessID {
+			t.Fatalf("unexpected non-chat match from session %s: %+v", m.SessionID, m)
+		}
+	}
+
+	prompt := payload.ToPrompt()
+	if strings.Contains(prompt, "定时任务执行过") || strings.Contains(prompt, "自动执行 deploy script") {
+		t.Fatalf("prompt should exclude schedule session content, got: %s", prompt)
+	}
+}
