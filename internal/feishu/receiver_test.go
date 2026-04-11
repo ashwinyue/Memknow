@@ -461,3 +461,28 @@ func newTextMessageEvent(chatType, chatID, threadID, messageID, senderOpenID, te
 func stringPtr(v string) *string {
 	return &v
 }
+
+func TestParsePostContent_TextAndLink(t *testing.T) {
+	r := &Receiver{}
+	content := `{"title":"标题","content":[[{"tag":"text","text":"第一行"},{"tag":"a","text":"链接"}],[{"tag":"text","text":"第二行"}]]}`
+	got, err := r.parsePostContent(context.Background(), content, "msg_123")
+	if err != nil {
+		t.Fatalf("parsePostContent() error = %v", err)
+	}
+	want := "标题\n第一行链接\n第二行"
+	if got != want {
+		t.Errorf("parsePostContent() = %q, want %q", got, want)
+	}
+}
+
+func TestParsePostContent_InvalidJSON(t *testing.T) {
+	r := &Receiver{}
+	content := "not-json"
+	got, err := r.parsePostContent(context.Background(), content, "msg_123")
+	if err != nil {
+		t.Fatalf("parsePostContent() error = %v", err)
+	}
+	if got != content {
+		t.Errorf("parsePostContent() = %q, want %q", got, content)
+	}
+}

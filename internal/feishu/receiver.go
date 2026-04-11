@@ -487,8 +487,7 @@ func (r *Receiver) parseContent(
 		return fmt.Sprintf("[文件: %s]", localPath), nil
 
 	case "post":
-		// Rich text - extract plain text portions only.
-		return extractPostText(content), nil
+		return r.parsePostContent(ctx, content, messageID)
 
 	default:
 		slog.Debug("feishu: unsupported message type", "type", msgType)
@@ -637,6 +636,60 @@ func extractPostText(content string) string {
 		sb.WriteString("\n")
 	}
 	return strings.TrimSpace(sb.String())
+}
+
+// parsePostContent extracts text and downloads attachments from a Feishu "post" message.
+func (r *Receiver) parsePostContent(ctx context.Context, content, messageID string) (string, error) {
+	var post struct {
+		Title   string                     `json:"title"`
+		Content [][]map[string]interface{} `json:"content"`
+	}
+	if err := json.Unmarshal([]byte(content), &post); err != nil {
+		return extractPostText(content), nil
+	}
+
+	var sb strings.Builder
+	if post.Title != "" {
+		sb.WriteString(post.Title + "\n")
+	}
+
+	for _, row := range post.Content {
+		for _, elem := range row {
+			tag, _ := elem["tag"].(string)
+			switch tag {
+			case "text", "a":
+				if text, _ := elem["text"].(string); text != "" {
+					sb.WriteString(text)
+				}
+			case "image", "img":
+				imageKey, _ := elem["image_key"].(string)
+				if imageKey != "" {
+					localPath, err := r.downloadImageResource(ctx, messageID, imageKey)
+					if err != nil {
+						slog.Warn("feishu: download post image failed, skipping", "err", err)
+						sb.WriteString("[图片下载失败]")
+					} else {
+						sb.WriteString(fmt.Sprintf("[图片: %s]", localPath))
+					}
+				}
+			case "file":
+				fileKey, _ := elem["file_key"].(string)
+				fileName, _ := elem["file_name"].(string)
+				if fileKey != "" {
+					localPath, err := r.downloadFile(ctx, messageID, fileKey, fileName)
+					if err != nil {
+						slog.Warn("feishu: download post file failed, skipping", "err", err, "file_name", fileName)
+						sb.WriteString(fmt.Sprintf("[文件 %s 下载失败]", fileName))
+					} else {
+						sb.WriteString(fmt.Sprintf("[文件: %s]", localPath))
+					}
+				}
+			}
+		}
+		sb.WriteString("\n")
+	}
+
+	return strings.TrimSpace(sb.String()), nil
 }
 
 // handleBotAddedToGroup generates a Claude welcome when the bot is added to a group.
