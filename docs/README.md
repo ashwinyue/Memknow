@@ -4,7 +4,7 @@
 
 如果你通过 GitHub Pages 浏览本项目，默认入口是 [index.html](./index.html)；如果你是在仓库里直接看文件，建议先从下面几个文档开始：
 
-- [memknow-course_zh.html](./memknow-course_zh.html)
+- [course/](./course/)
   面向进阶用户的系统导览页，按主链路、workspace、session、长期记忆、heartbeat 和 schedule 解释项目如何运作。
 - [../README.md](../README.md)
   项目总览、能力列表、架构概览和基础使用方式。
@@ -24,7 +24,7 @@
 
 推荐阅读顺序：
 
-1. `memknow-course_zh.html`
+1. `course/`
 2. `README.md`
 3. `design.md`
 4. `quickstart.md`
