@@ -45,6 +45,10 @@ cp config.yaml.template config.yaml
 
 后台运行与详细部署说明请参阅 `docs/quickstart.md`。
 
+如果你想先快速理解系统是如何工作的，可直接打开文档首页：
+
+- [`docs/`](docs/)
+
 ---
 
 ## 为什么选择 Memknow？

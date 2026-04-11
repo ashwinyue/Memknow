@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memknow：系统是如何工作的</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@500;700;800&family=IBM+Plex+Sans+SC:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3efe7;
+  --bg-soft: #faf7f1;
+  --paper: rgba(255, 252, 247, 0.84);
+  --panel: #fffdf8;
+  --panel-strong: #fff8ed;
+  --ink: #1f2529;
+  --muted: #61707a;
+  --line: rgba(31, 37, 41, 0.12);
+  --line-strong: rgba(31, 37, 41, 0.24);
+  --accent: #b5471f;
+  --accent-2: #0d6e6e;
+  --accent-3: #3557b7;
+  --accent-4: #95711a;
+  --danger: #a83939;
+  --success: #2f6b45;
+  --code-bg: #172128;
+  --code-fg: #d8e5ea;
+  --shadow: 0 18px 50px rgba(38, 40, 36, 0.12);
+  --radius: 18px;
+  --radius-sm: 12px;
+  --nav-height: 58px;
+  --max: 1120px;
+  --text-xs: 0.8rem;
+  --text-sm: 0.92rem;
+  --text-base: 1rem;
+  --text-lg: 1.14rem;
+  --text-xl: 1.36rem;
+  --text-2xl: 1.85rem;
+  --text-3xl: 2.55rem;
+  --text-4xl: 4rem;
+  --font-display: "Alegreya", serif;
+  --font-body: "IBM Plex Sans SC", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scroll-snap-type: y proximity;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at top left, rgba(181, 71, 31, 0.14), transparent 28%),
+    radial-gradient(circle at 82% 18%, rgba(13, 110, 110, 0.1), transparent 24%),
+    linear-gradient(180deg, #efe9de 0%, #f5f1e8 38%, #f0ece5 100%);
+  line-height: 1.8;
+}
+
+a { color: inherit; }
+
+pre, code {
+  font-family: var(--font-mono);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+::selection {
+  background: rgba(181, 71, 31, 0.16);
+}
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  height: var(--nav-height);
+  backdrop-filter: blur(18px);
+  background: rgba(243, 239, 231, 0.8);
+  border-bottom: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.nav-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.nav-brand strong {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  letter-spacing: 0.02em;
+}
+
+.nav-brand span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-link {
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  transform: scaleX(0);
+  transform-origin: left;
+  background: var(--accent);
+  transition: transform 240ms var(--ease);
+}
+
+.nav-link.active {
+  color: var(--ink);
+}
+
+.nav-link.active::after {
+  transform: scaleX(1);
+}
+
+.section {
+  min-height: 100vh;
+  scroll-snap-align: start;
+  padding: 112px 24px 48px;
+}
+
+.section-inner {
+  max-width: var(--max);
+  margin: 0 auto;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 30px;
+  align-items: stretch;
+}
+
+.hero-copy {
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.9), rgba(255, 249, 238, 0.82));
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  border-radius: 30px;
+  box-shadow: var(--shadow);
+  padding: 34px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-copy::before {
+  content: "";
+  position: absolute;
+  right: -20%;
+  top: -16%;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(181, 71, 31, 0.12), transparent 68%);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.hero h1 {
+  margin: 18px 0 12px;
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 7vw, 5.2rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+
+.hero p.lead {
+  margin: 0 0 24px;
+  font-size: clamp(1.06rem, 1.5vw, 1.28rem);
+  color: #364048;
+  max-width: 36rem;
+}
+
+.hero-meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.meta-card {
+  padding: 16px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.meta-card strong {
+  display: block;
+  font-size: 1.4rem;
+  margin-bottom: 4px;
+}
+
+.meta-card span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.hero-board {
+  background:
+    linear-gradient(180deg, rgba(21, 33, 40, 0.98), rgba(22, 28, 34, 0.94)),
+    var(--code-bg);
+  color: var(--code-fg);
+  border-radius: 30px;
+  padding: 26px;
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.4));
+  pointer-events: none;
+}
+
+.board-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  font-size: var(--text-sm);
+  position: relative;
+  z-index: 1;
+}
+
+.board-badge {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(216, 229, 234, 0.1);
+  color: #9cd3d3;
+}
+
+.flowline {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.flowline-card {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(216, 229, 234, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.flowline-card strong {
+  display: block;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.flowline-card span {
+  color: #a7bac1;
+  font-size: var(--text-sm);
+}
+
+.flowline-arrow {
+  height: 24px;
+  margin-left: 20px;
+  border-left: 1px dashed rgba(216, 229, 234, 0.24);
+}
+
+.intro-grid,
+.split-grid,
+.dual-grid,
+.tri-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.intro-grid {
+  grid-template-columns: 1.15fr 0.85fr;
+  margin-top: 22px;
+}
+
+.split-grid {
+  grid-template-columns: 1fr 1fr;
+}
+
+.dual-grid {
+  grid-template-columns: 1.1fr 0.9fr;
+}
+
+.tri-grid {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.card {
+  background: var(--paper);
+  border-radius: var(--radius);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  box-shadow: 0 12px 28px rgba(48, 46, 39, 0.06);
+  padding: 22px;
+}
+
+.card strong.title,
+.callout strong.title {
+  display: block;
+  font-size: var(--text-lg);
+  margin-bottom: 10px;
+}
+
+.card p,
+.callout p,
+.section-intro p {
+  margin: 0;
+  color: #40505a;
+}
+
+.chapter-head {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 24px;
+  align-items: start;
+  margin-bottom: 26px;
+}
+
+.chapter-no {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 10vw, 7rem);
+  line-height: 0.88;
+  color: rgba(181, 71, 31, 0.2);
+}
+
+.chapter-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.chapter-head p {
+  margin: 12px 0 0;
+  color: var(--muted);
+  max-width: 46rem;
+}
+
+.ribbon {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(13, 110, 110, 0.1);
+  color: var(--accent-2);
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+}
+
+.timeline {
+  position: relative;
+  display: grid;
+  gap: 14px;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 18px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(181, 71, 31, 0.42), rgba(53, 87, 183, 0.22));
+}
+
+.timeline-step {
+  position: relative;
+  padding: 14px 14px 14px 52px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.timeline-step::before {
+  content: attr(data-step);
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: white;
+  background: var(--accent);
+}
+
+.timeline-step strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.chip-list,
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.chip,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.chip::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.callout {
+  padding: 18px 20px;
+  border-radius: var(--radius);
+  border-left: 4px solid var(--accent);
+  background: linear-gradient(180deg, rgba(181, 71, 31, 0.08), rgba(181, 71, 31, 0.04));
+}
+
+.callout.warn {
+  border-left-color: var(--danger);
+  background: linear-gradient(180deg, rgba(168, 57, 57, 0.09), rgba(168, 57, 57, 0.04));
+}
+
+.callout.info {
+  border-left-color: var(--accent-2);
+  background: linear-gradient(180deg, rgba(13, 110, 110, 0.1), rgba(13, 110, 110, 0.04));
+}
+
+.code-block {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  color: var(--code-fg);
+  border: 1px solid rgba(216, 229, 234, 0.08);
+  font-size: 0.92rem;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.module-card {
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.74), rgba(255,248,238,0.9));
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  min-height: 150px;
+}
+
+.module-card em {
+  font-style: normal;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  color: white;
+  background: var(--accent);
+}
+
+.module-card:nth-child(2) em { background: var(--accent-2); }
+.module-card:nth-child(3) em { background: var(--accent-3); }
+.module-card:nth-child(4) em { background: var(--accent-4); }
+.module-card:nth-child(5) em { background: var(--success); }
+
+.module-card strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.module-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.stack {
+  display: grid;
+  gap: 10px;
+}
+
+.stack-layer {
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  background: var(--panel);
+}
+
+.stack-layer strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.stack-layer span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.session-diagram {
+  display: grid;
+  gap: 12px;
+}
+
+.session-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.session-key {
+  padding: 16px;
+  border-radius: 16px;
+  background: #1d252c;
+  color: #f4f8f9;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+}
+
+.session-detail {
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.session-detail strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.ledger {
+  display: grid;
+  gap: 10px;
+}
+
+.ledger-item {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.ledger-item code {
+  color: var(--accent-3);
+}
+
+.tree {
+  background: var(--panel);
+  border-radius: var(--radius);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+  padding: 18px;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  overflow-x: auto;
+}
+
+.tree .accent { color: var(--accent); }
+.tree .green { color: var(--success); }
+.tree .blue { color: var(--accent-3); }
+.tree .muted { color: #738089; }
+
+.compare {
+  display: grid;
+  gap: 12px;
+}
+
+.compare-item {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.compare-label {
+  padding: 14px;
+  border-radius: 16px;
+  color: white;
+  background: #273238;
+  font-weight: 600;
+}
+
+.compare-item:nth-child(2) .compare-label {
+  background: #203d3d;
+}
+
+.compare-body {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--panel);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.boundary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.boundary-card {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.boundary-card.good {
+  border-top: 4px solid var(--success);
+}
+
+.boundary-card.bad {
+  border-top: 4px solid var(--danger);
+}
+
+.footer {
+  padding: 20px 24px 56px;
+}
+
+.footer-card {
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 22px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(249, 243, 232, 0.88));
+  border: 1px solid rgba(31, 37, 41, 0.08);
+}
+
+.footer-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 650ms var(--ease), transform 650ms var(--ease);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 980px) {
+  .hero,
+  .intro-grid,
+  .split-grid,
+  .dual-grid,
+  .tri-grid,
+  .boundary-grid,
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chapter-head {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .session-row,
+  .ledger-item,
+  .compare-item {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .nav {
+    height: auto;
+  }
+
+  .nav-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .section {
+    padding-top: 132px;
+  }
+
+  .nav-links {
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 2px;
+  }
+
+  .hero-copy,
+  .hero-board {
+    padding: 22px;
+    border-radius: 24px;
+  }
+}
+</style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="progress" id="progress"></div>
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <strong>Memknow</strong>
+        <span>系统工作原理导览</span>
+      </div>
+      <div class="nav-links">
+        <button class="nav-link active" data-target="overview">总览</button>
+        <button class="nav-link" data-target="flow">主链路</button>
+        <button class="nav-link" data-target="workspace">Workspace</button>
+        <button class="nav-link" data-target="session">Session</button>
+        <button class="nav-link" data-target="memory">长期记忆</button>
+        <button class="nav-link" data-target="scheduler">主动能力</button>
+        <button class="nav-link" data-target="boundary">边界</button>
+      </div>
+    </div>
+  </nav>
+
+  <section class="section" id="overview">
+    <div class="section-inner">
+      <div class="hero">
+        <div class="hero-copy reveal">
+          <div class="eyebrow">Memknow · Feishu × Claude Code × Long Memory</div>
+          <h1>你的 bot 不是一个请求处理器，而是一套活着的工作区。</h1>
+          <p class="lead">
+            Memknow 把飞书消息、Claude Code CLI、本地 workspace 和记忆检索层接成了一条稳定运行链路。
+            这页不是安装说明，而是一堂系统解剖课：从一条消息开始，看它如何穿过会话队列、上下文增强、Claude 执行器，再回到飞书卡片。
+          </p>
+          <div class="hero-meta">
+            <div class="meta-card">
+              <strong>1 个 app = 1 个 workspace</strong>
+              <span>应用级隔离，模板、记忆、session、技能全部独立</span>
+            </div>
+            <div class="meta-card">
+              <strong>按 channel_key 串行</strong>
+              <span>同一聊天上下文不并发抢写，不同聊天并发运行</span>
+            </div>
+            <div class="meta-card">
+              <strong>不是云 Agent 托管</strong>
+              <span>前提是本机已经安装并登录 Claude Code</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-board reveal">
+          <div class="board-title">
+            <strong>端到端运行快照</strong>
+            <span class="board-badge">single machine / sqlite wal / claude cli</span>
+          </div>
+          <div class="flowline">
+            <div class="flowline-card">
+              <strong>1. 飞书用户发消息</strong>
+              <span>text / post / image / file 进入 WebSocket 事件流</span>
+            </div>
+            <div class="flowline-arrow"></div>
+            <div class="flowline-card">
+              <strong>2. Receiver 标准化</strong>
+              <span>解析消息、下载附件、构造 IncomingMessage</span>
+            </div>
+            <div class="flowline-arrow"></div>
+            <div class="flowline-card">
+              <strong>3. Session Worker 串行执行</strong>
+              <span>基于 channel_key 路由到稳定队列，组装 prompt 与上下文</span>
+            </div>
+            <div class="flowline-arrow"></div>
+            <div class="flowline-card">
+              <strong>4. Claude Executor 调用 CLI</strong>
+              <span>在目标 workspace 中 resume 并流式消费 stream-json</span>
+            </div>
+            <div class="flowline-arrow"></div>
+            <div class="flowline-card">
+              <strong>5. Feishu Sender 回写卡片</strong>
+              <span>Thinking、结果、错误、重试状态都会回传到聊天界面</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="intro-grid">
+        <div class="card reveal">
+          <strong class="title">这一页回答 3 个关键问题</strong>
+          <div class="timeline">
+            <div class="timeline-step" data-step="01">
+              <strong>消息是怎么被可靠地串起来的？</strong>
+              从飞书事件，到 `session.Manager`，再到每个 `Worker` 的串行队列模型。
+            </div>
+            <div class="timeline-step" data-step="02">
+              <strong>为什么它能有“长期记忆”？</strong>
+              不是把所有历史一股脑塞进 prompt，而是靠 session 归档、摘要与检索注入。
+            </div>
+            <div class="timeline-step" data-step="03">
+              <strong>为什么它能主动执行？</strong>
+              因为 `heartbeat` 和 `schedule` 是框架内建机制，不是让 agent 自己写 YAML 假装调度。
+            </div>
+          </div>
+        </div>
+
+        <div class="card reveal">
+          <strong class="title">先抓住核心判断</strong>
+          <div class="chip-list">
+            <span class="chip">Memknow 是编排层</span>
+            <span class="chip">Claude Code 是执行内核</span>
+            <span class="chip">workspace 是 bot 的长期住处</span>
+            <span class="chip">SQLite 是会话与调度账本</span>
+            <span class="chip">Feishu 是输入输出界面</span>
+          </div>
+          <div class="callout warn" style="margin-top:16px;">
+            <strong class="title">不要误解成“另一个 LLM 平台”</strong>
+            <p>Memknow 不替代 Claude Code。它负责把飞书、会话管理、调度、记忆和本地工作区接起来，让 Claude Code 在一个可持续运行的系统里工作。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="flow">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">01</div>
+        <div>
+          <h2>先跑一遍完整主链路</h2>
+          <p>如果你只能记住一段内容，就记住这一章。Memknow 的价值首先不在“功能点”，而在它把一次飞书消息可靠地推进到了一个真实的本地 Agent 工作流里。</p>
+          <span class="ribbon">从 Feishu 到 Claude CLI，再回到卡片响应</span>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <div class="card reveal">
+          <strong class="title">消息进入系统后的 6 个动作</strong>
+          <div class="timeline">
+            <div class="timeline-step" data-step="1">
+              <strong>Receiver 接住 WebSocket 事件</strong>
+              解析 `text`、`post`、`image`、`file`，欢迎事件直接回复，不进入 Claude 执行链路。
+            </div>
+            <div class="timeline-step" data-step="2">
+              <strong>标准化为 IncomingMessage</strong>
+              判断来源 chat、thread、mentions、reply 关系，并在需要时把附件先下载到临时目录。
+            </div>
+            <div class="timeline-step" data-step="3">
+              <strong>Session Manager 用 channel_key 分发</strong>
+              `p2p`、`group`、`thread` 形成稳定键。相同键进入同一 Worker 队列，不同键并发执行。
+            </div>
+            <div class="timeline-step" data-step="4">
+              <strong>Worker 组装可执行上下文</strong>
+              取当前 session、移动附件、记录用户消息、做历史摘要检索、构造 prompt。
+            </div>
+            <div class="timeline-step" data-step="5">
+              <strong>Executor 调 `claude --resume`</strong>
+              真实进入目标 workspace 目录，流式接收 Claude Code 的输出和工具调用结果。
+            </div>
+            <div class="timeline-step" data-step="6">
+              <strong>Sender 持续回传状态</strong>
+              Thinking 卡片、结果文本、失败信息、重试表现都会回写到飞书消息。
+            </div>
+          </div>
+        </div>
+
+        <div class="card reveal">
+          <strong class="title">主链路背后的组件边界</strong>
+          <div class="module-grid">
+            <div class="module-card">
+              <em>F</em>
+              <strong>`internal/feishu`</strong>
+              <p>输入输出边界。接 WS，发卡片，不关心记忆细节。</p>
+            </div>
+            <div class="module-card">
+              <em>S</em>
+              <strong>`internal/session`</strong>
+              <p>对话编排核心。管理 Worker、session 生命周期、上下文注入。</p>
+            </div>
+            <div class="module-card">
+              <em>C</em>
+              <strong>`internal/claude`</strong>
+              <p>把 prompt 和工作目录真正送给 Claude Code CLI。</p>
+            </div>
+            <div class="module-card">
+              <em>D</em>
+              <strong>`internal/db` + model</strong>
+              <p>存会话、消息、摘要、schedule 和日志。</p>
+            </div>
+            <div class="module-card">
+              <em>W</em>
+              <strong>`internal/workspace`</strong>
+              <p>负责 bot 住的地方：模板初始化、skills、memory、sessions。</p>
+            </div>
+          </div>
+          <div class="callout info" style="margin-top:16px;">
+            <strong class="title">关键设计取舍</strong>
+            <p>Memknow 没有把所有职责堆进一个“智能 Agent 服务”里，而是把输入输出、会话编排、Claude 执行、工作区初始化拆清楚。这样调试和演进都更稳。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dual-grid" style="margin-top:18px;">
+        <div class="code-block reveal"><code>Feishu User
+  -> WebSocket Event
+  -> feishu.Receiver
+  -> session.Manager.Dispatch()
+  -> session.Worker
+  -> claude.Executor
+  -> feishu.Sender
+  -> Feishu Card / Text Reply</code></div>
+
+        <div class="card reveal">
+          <strong class="title">为什么这条链路重要</strong>
+          <p>很多“聊天机器人”只是在回调里拼一段 prompt 然后调用模型 API。Memknow 做得更深一层：它把每次消息都导向一个真实可持续的本地工作区，让 bot 具备编辑文件、执行命令、积累记忆和被系统定时唤醒的条件。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="workspace">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">02</div>
+        <div>
+          <h2>为什么每个 bot 都有独立 workspace</h2>
+          <p>在 Memknow 里，bot 不是一组数据库字段，而是一个真正的目录树。你可以把它理解成“AI 的长期住处”：人格、记忆、技能和会话现场都放在这里。</p>
+          <span class="ribbon">app 级隔离，而不是 prompt 级临时拼装</span>
+        </div>
+      </div>
+
+      <div class="dual-grid">
+        <div class="tree reveal"><code><span class="accent">workspaces/&lt;app-id&gt;/</span>
+├── <span class="blue">SOUL.md</span>          <span class="muted">bot 的长期行为设定</span>
+├── <span class="blue">IDENTITY.md</span>      <span class="muted">身份描述</span>
+├── <span class="blue">USER.md</span>          <span class="muted">用户关系与约束</span>
+├── <span class="blue">MEMORY.md</span>        <span class="muted">记忆使用规则</span>
+├── <span class="blue">HEARTBEAT.md</span>     <span class="muted">心跳检查清单</span>
+├── <span class="green">skills/</span>          <span class="muted">按需读取的能力说明</span>
+├── <span class="green">memory/</span>          <span class="muted">长期知识沉淀</span>
+├── <span class="green">sessions/</span>        <span class="muted">运行期会话现场</span>
+├── <span class="blue">bin/web-search</span>   <span class="muted">本地统一搜索入口</span>
+└── <span class="blue">.search.json</span>      <span class="muted">运行期搜索配置</span></code></div>
+
+        <div class="card reveal">
+          <strong class="title">这个目录结构解决了什么问题</strong>
+          <div class="stack">
+            <div class="stack-layer">
+              <strong>1. 多应用隔离</strong>
+              <span>不同飞书 app 用不同 workspace，不共享记忆、不共享 session 目录、不串 prompt。</span>
+            </div>
+            <div class="stack-layer">
+              <strong>2. 让 Claude Code 有“落脚点”</strong>
+              <span>Claude 执行时不是在空目录里想象自己有文件，而是真的进入这个工作区。</span>
+            </div>
+            <div class="stack-layer">
+              <strong>3. 记忆与行为可以被演化</strong>
+              <span>`HEARTBEAT.md`、memory 文件、skills 内容都可以在长期运行中被调整。</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="split-grid" style="margin-top:18px;">
+        <div class="card reveal">
+          <strong class="title">模板不是摆设，而是启动时的默认人格包</strong>
+          <p>`internal/workspace/template/` 里的中英文模板会被嵌入到二进制里。新 workspace 初始化时，如果缺文件，就从模板生成默认内容。这意味着项目层面对“一个 bot 初始长什么样”有统一、可版本化的控制。</p>
+        </div>
+        <div class="callout reveal">
+          <strong class="title">一个容易忽略的点</strong>
+          <p>`HEARTBEAT.md` 是心跳运行器读取的工作清单，不是任务 YAML 模板。Memknow 明确把 heartbeat 设计成系统内建调度，而不是依赖 agent 自己写配置文件来伪造主动性。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="session">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">03</div>
+        <div>
+          <h2>一次对话如何被串行处理</h2>
+          <p>这部分决定系统稳不稳。Memknow 没有让同一聊天上下文里的消息并发地撞进同一个 Claude session，而是用 `channel_key` 维持稳定的串行执行面。</p>
+          <span class="ribbon">稳定的会话键，比“谁先抢到 goroutine”更重要</span>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <div class="card reveal">
+          <strong class="title">channel_key 的意义</strong>
+          <div class="session-diagram">
+            <div class="session-row">
+              <div class="session-key">p2p:{chat_id}:{app_id}</div>
+              <div class="session-detail">
+                <strong>单聊</strong>
+                同一个人与同一个 app 的私聊，会稳定地落到一个 Worker 队列里。
+              </div>
+            </div>
+            <div class="session-row">
+              <div class="session-key">group:{chat_id}:{app_id}</div>
+              <div class="session-detail">
+                <strong>群聊</strong>
+                群整体共享上下文，适合群内共同协作场景。
+              </div>
+            </div>
+            <div class="session-row">
+              <div class="session-key">thread:{chat_id}:{thread_id}:{app_id}</div>
+              <div class="session-detail">
+                <strong>话题群</strong>
+                把 thread 作为更细粒度上下文边界，避免群内多个话题互相污染。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card reveal">
+          <strong class="title">Worker 在执行时实际做的账本动作</strong>
+          <div class="ledger">
+            <div class="ledger-item">
+              <code>getOrCreateSession()</code>
+              <div>获取当前活跃 session，或在需要时创建新的 `session_id` 与 Claude resume 关系。</div>
+            </div>
+            <div class="ledger-item">
+              <code>moveAttachments()</code>
+              <div>把 Receiver 下载到临时目录的附件，移入当前 session 的 `attachments/`。</div>
+            </div>
+            <div class="ledger-item">
+              <code>DB record</code>
+              <div>先记 user message，再写 assistant/tool 结果和 token 统计，保证会话能回放。</div>
+            </div>
+            <div class="ledger-item">
+              <code>Retrieve()</code>
+              <div>根据 channel_key 和当前输入做历史摘要检索，构造 ContextPayload 注入 prompt。</div>
+            </div>
+            <div class="ledger-item">
+              <code>Execute()</code>
+              <div>进入 Claude CLI 执行。若空文本返回，会尝试归档、摘要、重试一次。</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="split-grid" style="margin-top:18px;">
+        <div class="callout info reveal">
+          <strong class="title">为什么串行是必要的</strong>
+          <p>Claude session 本身就有上下文状态。如果同一会话边界里的消息并发进来，文件修改、上下文注入、回传卡片顺序都可能乱掉。Memknow 把并发留给不同 `channel_key`，把顺序保证留给同一个 `channel_key`。</p>
+        </div>
+        <div class="code-block reveal"><code>channel_key
+  -> dedicated worker queue
+  -> active Memknow session_id
+  -> claude_session_id (--resume)
+
+same channel_key: serial
+different channel_key: concurrent</code></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="memory">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">04</div>
+        <div>
+          <h2>长期记忆不是堆历史，而是检索归档</h2>
+          <p>“长期记忆”最容易被说虚。Memknow 这里做得相对务实：保留 Claude `--resume` 的连续上下文能力，同时在 session 维度做摘要归档和后续检索，把跨 session 的连续性补上。</p>
+          <span class="ribbon">resume 保留短中期上下文，summary + retrieve 补长期连续性</span>
+        </div>
+      </div>
+
+      <div class="dual-grid">
+        <div class="card reveal">
+          <strong class="title">记忆链路分两层</strong>
+          <div class="compare">
+            <div class="compare-item">
+              <div class="compare-label">会话内连续性</div>
+              <div class="compare-body">
+                依赖 Claude CLI 自己的 `--resume`。只要你还在同一个 session 里，Claude 会延续之前的内部上下文。
+              </div>
+            </div>
+            <div class="compare-item">
+              <div class="compare-label">跨会话连续性</div>
+              <div class="compare-body">
+                由 Memknow 自己负责。归档旧 session，生成 `session_summaries`，在新消息到来时按 channel_key 与当前 prompt 做检索，再把相关摘要注入。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card reveal">
+          <strong class="title">这比“把历史都塞进去”更可持续</strong>
+          <p>直接把所有历史消息拼进 prompt，短期内看似简单，长期一定爆。Memknow 选择的是更像信息检索系统的做法：哪些历史值得带回来，由摘要与检索层决定，而不是由上下文窗口硬撑。</p>
+        </div>
+      </div>
+
+      <div class="split-grid" style="margin-top:18px;">
+        <div class="card reveal">
+          <strong class="title">归档发生在什么时候</strong>
+          <div class="timeline">
+            <div class="timeline-step" data-step="A">
+              <strong>用户长时间不继续对话</strong>
+              空闲超时后，当前 session 可以被归档。
+            </div>
+            <div class="timeline-step" data-step="B">
+              <strong>需要切换到新 session</strong>
+              例如 `/new` 之类的显式操作，会结束当前上下文并启动新会话。
+            </div>
+            <div class="timeline-step" data-step="C">
+              <strong>执行异常触发补救</strong>
+              某些空响应场景下，Worker 会尝试先摘要归档，再带摘要重试。
+            </div>
+          </div>
+        </div>
+
+        <div class="code-block reveal"><code>archived session
+  -> summarize
+  -> store in session_summaries
+  -> next user message arrives
+  -> retrieve relevant summaries
+  -> build ContextPayload
+  -> inject into prompt
+  -> execute in new or current session</code></div>
+      </div>
+
+      <div class="callout reveal" style="margin-top:18px;">
+        <strong class="title">这里的“长期”是工程上的长期，不是魔法上的长期</strong>
+        <p>它依赖的是持续积累文件、结构化摘要和可检索历史，而不是假设模型自己永远记得一切。也正因为如此，它更接近一个真实可维护的 Agent 记忆层。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="scheduler">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">05</div>
+        <div>
+          <h2>主动能力从哪里来：Heartbeat 与 Schedule</h2>
+          <p>Memknow 不只支持“收到消息再回复”。它内建了两种主动触发机制，但两者职责完全不同：`heartbeat` 是系统维护循环，`schedule` 是业务提醒与计划执行。</p>
+          <span class="ribbon">主动性来自框架内建调度，不来自 prompt 里的自我幻想</span>
+        </div>
+      </div>
+
+      <div class="split-grid">
+        <div class="card reveal">
+          <strong class="title">Heartbeat</strong>
+          <p>这是系统级自检和维护循环，由 `internal/heartbeat` 按 `config.yaml` 配置周期触发。它会读取 workspace 里的 `HEARTBEAT.md`，让 bot 定期检查自己该整理什么、更新什么、反思什么。</p>
+          <div class="tag-row" style="margin-top:14px;">
+            <span class="tag">内建服务</span>
+            <span class="tag">系统维护</span>
+            <span class="tag">读取 HEARTBEAT.md</span>
+            <span class="tag">不写 YAML 任务</span>
+          </div>
+        </div>
+
+        <div class="card reveal">
+          <strong class="title">Schedule</strong>
+          <p>这是业务侧的自然语言调度能力，由 `internal/schedule` 负责。用户可以通过“每小时提醒我喝水”“明天 10 点提醒我回顾 PR”这类语言创建、查看、修改、删除定时任务。任务实体存数据库，由调度器直接执行。</p>
+          <div class="tag-row" style="margin-top:14px;">
+            <span class="tag">用户可管理</span>
+            <span class="tag">DB 持久化</span>
+            <span class="tag">gocron 执行</span>
+            <span class="tag">不是 tasks/*.yaml</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dual-grid" style="margin-top:18px;">
+        <div class="code-block reveal"><code>heartbeat:
+  config.yaml -> heartbeat service
+  -> open workspace HEARTBEAT.md
+  -> run maintenance turn
+
+schedule:
+  user natural language
+  -> schedule intent parser
+  -> schedules table
+  -> scheduler executes at trigger time</code></div>
+
+        <div class="callout warn reveal">
+          <strong class="title">项目里专门强调的一条规则</strong>
+          <p>不要把 heartbeat 实现成生成任务 YAML，也不要把 schedule 的创建依赖于 agent 去写 YAML 文件。主动执行必须是框架层确定的能力，而不是 prompt 层约定俗成的“假功能”。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="boundary">
+    <div class="section-inner">
+      <div class="chapter-head reveal">
+        <div class="chapter-no">06</div>
+        <div>
+          <h2>这套系统的边界与适用场景</h2>
+          <p>理解 Memknow，不只要知道它能做什么，也要知道它刻意没有做什么。它是一个偏单机、偏本地、偏工作区编排的 Agent 平台，而不是一个大一统云原生控制平面。</p>
+          <span class="ribbon">边界讲清楚，场景判断才不会跑偏</span>
+        </div>
+      </div>
+
+      <div class="boundary-grid">
+        <div class="boundary-card good reveal">
+          <strong class="title">它适合什么</strong>
+          <p>适合把一个飞书 bot 变成真正有 workspace、有文件系统、有长期记忆沉淀能力的数字同事。尤其适合私有部署、企业内网、工具链已经围绕 Claude Code 展开的场景。</p>
+        </div>
+        <div class="boundary-card bad reveal">
+          <strong class="title">它不打算解决什么</strong>
+          <p>它不是多租户云平台，不是无状态函数调用框架，也不是“接一下大模型 API 就自动拥有长期记忆”。它依赖本机 Claude Code、文件系统和本地持久化。</p>
+        </div>
+        <div class="boundary-card good reveal">
+          <strong class="title">为什么单机设计反而有优势</strong>
+          <p>部署简单、状态清晰、调试路径短。SQLite WAL、workspace 目录、Claude CLI 都在一台机器上，很多复杂度被直接压平了。</p>
+        </div>
+        <div class="boundary-card bad reveal">
+          <strong class="title">你需要接受的约束</strong>
+          <p>前提是机器已经安装并登录 Claude Code；某些能力天然绑定本地环境；横向扩展、多机共享状态、统一集中调度不是当前设计重点。</p>
+        </div>
+      </div>
+
+      <div class="split-grid" style="margin-top:18px;">
+        <div class="card reveal">
+          <strong class="title">一句话重新总结 Memknow</strong>
+          <p>它是一个把飞书接入、会话调度、本地工作区、Claude Code CLI、长期记忆和系统级主动执行接到一起的编排层。它让 bot 从“会回复消息的接口”升级成“在一个持续存在的目录里工作和成长的 agent”。</p>
+        </div>
+        <div class="card reveal">
+          <strong class="title">如果你要继续往下读</strong>
+          <p>建议顺序是：先读 `README.md` 了解整体能力，再读 `docs/design.md` 看实现结构，最后回到代码中的 `internal/session`、`internal/claude`、`internal/workspace` 三个目录，把这页里的心智模型和实际实现一一对照起来。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-card reveal">
+      <p>
+        本页基于当前仓库中的 `README.md`、`docs/design.md` 与目录结构整理，定位是“进阶用户的系统导览页”。
+        如果你准备把它对外展示，建议再补一张真正的架构图或运行截图作为配套视觉材料。
+      </p>
+    </div>
+  </footer>
+
+<script>
+const sections = [...document.querySelectorAll(".section")];
+const navLinks = [...document.querySelectorAll(".nav-link")];
+const progress = document.getElementById("progress");
+const revealNodes = [...document.querySelectorAll(".reveal")];
+
+navLinks.forEach((link) => {
+  link.addEventListener("click", () => {
+    const target = document.getElementById(link.dataset.target);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+
+const sectionObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    const id = entry.target.id;
+    navLinks.forEach((link) => {
+      link.classList.toggle("active", link.dataset.target === id);
+    });
+  });
+}, { threshold: 0.45 });
+
+sections.forEach((section) => sectionObserver.observe(section));
+
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (!entry.isIntersecting) return;
+    entry.target.classList.add("visible");
+    revealObserver.unobserve(entry.target);
+  });
+}, { threshold: 0.16 });
+
+revealNodes.forEach((node) => revealObserver.observe(node));
+
+const updateProgress = () => {
+  const scrollTop = window.scrollY;
+  const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+  const percent = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+  progress.style.width = percent + "%";
+};
+
+updateProgress();
+window.addEventListener("scroll", updateProgress, { passive: true });
+</script>
+</body>
+</html>
