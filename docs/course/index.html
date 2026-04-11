@@ -220,9 +220,11 @@ pre, code {
 .hero h1 {
   margin: 18px 0 12px;
   font-family: var(--font-display);
-  font-size: clamp(3rem, 7vw, 5.2rem);
-  line-height: 0.95;
-  letter-spacing: -0.03em;
+  font-size: clamp(2.35rem, 5.8vw, 4.3rem);
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+  max-width: 10.5em;
+  text-wrap: balance;
 }
 
 .hero p.lead {
@@ -781,6 +783,12 @@ pre, code {
   .hero-board {
     padding: 22px;
     border-radius: 24px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.15rem, 11vw, 3.4rem);
+    line-height: 1.06;
+    max-width: none;
   }
 }
 </style>
