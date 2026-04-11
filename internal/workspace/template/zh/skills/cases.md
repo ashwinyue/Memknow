@@ -1,0 +1,91 @@
+# Cases 系统规范
+
+本 skill 规范如何记录和检索重要的具体事件（cases），在日常对话中自动沉淀经验。
+
+---
+
+## 何时触发
+
+### 自动录入
+
+用户描述满足以下条件时，主动询问「要不要记录这个案例？」：
+- 有具体时间 + 具体场景 + 经过或结果
+- 描述一件有分析/复盘价值的事件（不是泛泛聊天）
+- 用户明确说「记一下」「记录这个」
+
+### 自动检索
+
+出现以下信号时，主动从 `$WORKSPACE_DIR/memory/cases/` 中检索相关案例：
+- 「上次」「之前」「记得吗」「有没有类似的」
+- 当前情况与历史案例高度相似时
+- 用户提问前可以用历史经验辅助回答时
+
+---
+
+## 目录结构
+
+```
+$WORKSPACE_DIR/memory/cases/
+├── index.md                            # 分类索引（每次新增 case 后更新）
+└── YYYY-MM-DD-{slug}.md               # 单条 case 文件
+```
+
+执行时必须使用绝对路径。`$WORKSPACE_DIR/memory/cases/` 目录按需创建。
+
+---
+
+## Case 文件模版
+
+文件名：`YYYY-MM-DD-{2-4 个英文关键词用连字符连接}.md`
+
+```markdown
+---
+date: YYYY-MM-DD
+category: [类别，见索引分类]
+keywords: [关键词1, 关键词2, 关键词3]
+status: open | resolved
+---
+
+# [简明标题]
+
+## 客观情况
+[还原事实：时间 / 地点 / 触发点 / 经过 / 各方反应。不加主观判断。]
+
+## 分析
+[行为解读、原因机制、相关背景知识的关联。]
+
+## 应对策略
+[本次讨论或实施的策略，可包含多个选项。]
+
+## 追踪记录
+
+| 日期 | 更新内容 |
+|------|---------|
+| YYYY-MM-DD | 初始记录 |
+```
+
+---
+
+## 索引文件模版
+
+文件：`$WORKSPACE_DIR/memory/cases/index.md`
+
+```markdown
+# Cases 索引
+
+> 最后更新：YYYY-MM-DD
+
+## [类别 1]
+- [YYYY-MM-DD 标题](文件名.md) — 一句话摘要
+
+## [类别 2]
+- [YYYY-MM-DD 标题](文件名.md) — 一句话摘要
+```
+
+---
+
+## 操作规范
+
+1. 写入 case 文件后，**必须同步更新** `$WORKSPACE_DIR/memory/cases/index.md`
+2. 多文件写入时使用 `flock -x "$WORKSPACE_DIR/.memory.lock"` 加锁
+3. `$WORKSPACE_DIR/memory/cases/` 目录按需创建（`mkdir -p "$WORKSPACE_DIR/memory/cases"`）

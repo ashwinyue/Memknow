@@ -1,0 +1,37 @@
+# ── Secrets & Config ──────────────────────────────────────────────────────────
+config.yaml
+config.yaml.bak*
+**/feishu_ops/feishu.json
+
+# ── Compiled Binaries ─────────────────────────────────────────────────────────
+/server
+
+# ── Runtime State ─────────────────────────────────────────────────────────────
+bot.db
+nohup.out
+server.pid
+*.log
+*.log.wf
+
+# ── Local Claude Settings (tool permissions, not for sharing) ─────────────────
+**/.claude/settings.local.json
+
+# ── Python Bytecode (feishu_ops/scripts) ──────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+
+# ── Workspace Runtime Data ────────────────────────────────────────────────────
+# Workspace instances contain user conversation data and runtime state.
+workspaces/*
+
+findings.md
+progress.md
+task_plan.md
+
+
+.idea
+
+
+# ── Private docs (not for commit) ─────────────────────────────────────────────
+docs/tech-share/

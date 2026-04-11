@@ -1,0 +1,79 @@
+server:
+  port: 8786
+
+claude:
+  timeout_minutes: 5
+  max_turns: 20
+  # 认证和基地址由 Claude CLI 的 ~/.claude/settings.json 自行管理
+  # 框架不再注入 ANTHROPIC_* 环境变量或 --settings
+
+session:
+  worker_idle_timeout_minutes: 30
+  probe:
+    enabled: false
+
+cleanup:
+  attachments_retention_days: 7
+  attachments_max_days: 30
+  schedule: "0 2 * * *"
+
+heartbeat:
+  enabled: false
+  interval_minutes: 30
+  prompt_file: "HEARTBEAT.md"
+  # 显式通知目标；留空表示仅执行 heartbeat，不向会话发送消息
+  notify_target_type: "" # p2p / group
+  notify_target_id: ""   # p2p=open_id(或oc_xxx chat_id), group=chat_id
+
+language: "zh"
+
+apps:
+  - id: "your-app-id"
+    feishu_app_id: "cli_xxx"
+    feishu_app_secret: "xxx"
+    feishu_verification_token: "xxx"
+    feishu_encrypt_key: ""
+    workspace_dir: "./workspaces/your-app-id"
+    workspace_mode: "work" # work=允许进度卡；companion=直接输出最终文本
+    workspace_template: "default" # default=通用模板；product-assistant=产品经理搭档演示；code-review=代码评审搭档
+    allowed_chats: []
+    claude:
+      permission_mode: "acceptEdits"
+      # model: "sonnet"              # 可选，覆盖 Claude CLI 默认模型（原样传给 --model）
+      allowed_tools:
+        - "Bash"
+        - "Read"
+        - "Edit"
+        - "Write"
+
+  # - id: "another-app"
+  #   feishu_app_id: "cli_yyy"
+  #   feishu_app_secret: "yyy"
+  #   feishu_verification_token: "yyy"
+  #   feishu_encrypt_key: ""
+  #   workspace_dir: "./workspaces/another-app"
+  #   workspace_mode: "companion"
+  #   workspace_template: "product-assistant"
+  #   allowed_chats:
+  #     - "oc_abc123"
+  #   claude:
+  #     permission_mode: "acceptEdits"
+  #     # model: "opus"               # 可选，覆盖 Claude CLI 默认模型
+  #     allowed_tools:
+  #       - "Read"
+  #       - "Bash"
+
+  # - id: "code-review"
+  #   feishu_app_id: "cli_zzz"
+  #   feishu_app_secret: "zzz"
+  #   feishu_verification_token: "zzz"
+  #   feishu_encrypt_key: ""
+  #   workspace_dir: "./workspaces/code-review"
+  #   workspace_mode: "work"
+  #   workspace_template: "code-review"
+  #   allowed_chats: []
+  #   claude:
+  #     permission_mode: "acceptEdits"
+  #     allowed_tools:
+  #       - "Read"
+  #       - "Bash"
