@@ -1,7 +1,12 @@
 .PHONY: fs setup-lark-bot build run daemon ds dr dsp daemon-install daemon-uninstall daemon-start daemon-stop daemon-restart daemon-status
 
 SETUP_LARK_BOT_SCRIPT ?= ./setup_lark_bot.sh
-DAEMON_SCRIPT ?= ./daemon-mac.sh
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    DAEMON_SCRIPT ?= ./daemon-linux.sh
+else
+    DAEMON_SCRIPT ?= ./daemon-mac.sh
+endif
 CONFIG ?= ./config.yaml
 DAEMON_BINARY ?= $(CURDIR)/server
 DAEMON_WORK_DIR ?= $(CURDIR)
