@@ -15,7 +15,7 @@ import (
 const (
 	feishuCardMaxRunes = 8000
 	feishuThinkingText = "Thinking..."
-	feishuBusyReaction = "OK"
+	feishuBusyReaction = "Typing"
 	feishuDoneReaction = "DONE"
 )
 
