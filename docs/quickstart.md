@@ -145,6 +145,12 @@ make fs APP_ID=demo-bot
 ./server -config /path/to/config.yaml
 ```
 
+**调试本地搜索配置**
+
+```bash
+./server web-search --query "Golang 1.24 new features"
+```
+
 **macOS launchd 开机自启**
 
 ```bash

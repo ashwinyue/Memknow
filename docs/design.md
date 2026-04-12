@@ -223,6 +223,8 @@ sequenceDiagram
 
 纯附件消息不会立即调用 Claude，而是先缓存并提示用户补充意图；下一条文字消息会自动合并发送。
 
+执行结果除文本和 reasoning 外，还会记录 `input_tokens`、`output_tokens`、`cache_read_tokens`、`cache_write_tokens` 和 `model`、`finish_reason`，用于后续用量观察和成本分析。
+
 ### 5.5 `/new`
 
 `/new` 只对 `chat` session 生效：
@@ -233,6 +235,17 @@ sequenceDiagram
 - 下一条消息不带 `--resume`
 
 话题群不支持 `/new`。
+
+### 5.6 Provider 模型路由
+
+框架在启动 `claude` 子进程时支持多 provider 模型选择：
+
+1. 每个 app 可配置 `claude.provider`，指向 `config.yaml` 中 `claude.providers` 的某个 key。
+2. 未指定 `provider` 时，使用全局 `claude.default_provider`。
+3. 解析出的 provider 配置（`base_url`、`auth_token`、`model`）通过环境变量注入子进程，或整理后传给 CLI 参数。
+4. `app.claude.model` 具有最高优先级，可覆盖 provider 的默认模型。
+
+默认 provider 为 `anthropic`（留空端点和 token，复用 Claude CLI 本地认证）。接入百炼等第三方端点时，只需在 `providers` 里新增 key 并在 app 中引用即可。
 
 ---
 
@@ -448,15 +461,19 @@ internal/workspace/          workspace 初始化与模板
 
 关键配置项：
 
-- `apps[]`：Feishu 凭证、workspace 路径、allowed_chats、Claude 工具权限
+- `apps[]`：Feishu 凭证、workspace 路径、allowed_chats、Claude 工具权限与模型
+- `apps[].claude.provider`：指定使用哪个模型提供商（对应 `claude.providers` 的 key）
 - `server.port`
 - `claude.max_turns`
+- `claude.default_provider` / `claude.providers`：多 provider 端点与密钥配置
 - `session.worker_idle_timeout_minutes`
+- `session.probe.enabled`
 - `heartbeat.enabled / interval_minutes / prompt_file / notify_target_*`
 - `web_search.tavily_api_key / tavily_base_url / timeout_seconds`
 - `cleanup.*`
+- `language`：模板语言（`zh` / `en`）
 
-`Claude CLI` 的认证、base URL 等运行环境由用户本机的 Claude 配置管理，Memknow 不额外落本地凭证文件。
+`Claude CLI` 的本地认证由 `~/.claude/settings.json` 管理，但第三方 provider（如百炼）的 `auth_token` 和 `base_url` 可直接在 `config.yaml` 中配置。Memknow 不额外维护本地凭证文件。
 
 ---
 

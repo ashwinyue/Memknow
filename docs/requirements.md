@@ -119,7 +119,7 @@ Memknow 是一个基于 Feishu 的长期记忆 AI Agent 平台。每个业务场
 | 网络接入 | 飞书 WebSocket，无需公网入口 |
 | 安全 | 附件大小限制、HTTP timeout、最小环境变量注入 |
 | 优雅关闭 | 等待 worker 退出，再关调度和 HTTP |
-| 兼容性 | 优先支持 macOS / Linux，本地开发友好 |
+| 兼容性 | 原生支持 macOS / Linux；Windows 仅通过 WSL2 支持，不支持原生 Windows 运行 |
 
 ---
 

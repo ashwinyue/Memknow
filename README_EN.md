@@ -45,6 +45,14 @@ cp config.yaml.template config.yaml
 
 For daemon mode and detailed deployment instructions, see `docs/quickstart.md`.
 
+Quick daemon setup:
+
+```bash
+make build
+make daemon-install   # Linux / macOS auto-start
+make daemon-status
+```
+
 ---
 
 ## Why Memknow?

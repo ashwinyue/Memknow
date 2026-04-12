@@ -43,7 +43,15 @@ cp config.yaml.template config.yaml
 ./server
 ```
 
-后台运行与详细部署说明请参阅 `docs/quickstart.md`。
+后台守护进程运行：
+
+```bash
+make build
+make daemon-install   # Linux / macOS 开机自启
+make daemon-status
+```
+
+详细部署说明请参阅 `docs/quickstart.md`。
 
 如果你想先快速理解系统是如何工作的，可直接打开文档首页：
 

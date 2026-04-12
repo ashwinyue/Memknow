@@ -49,9 +49,21 @@ server:
 claude:
   timeout_minutes: 5                    # 单次 claude 执行超时（分钟）
   max_turns: 20                         # claude CLI --max-turns 参数
+  default_provider: "anthropic"         # 默认模型提供商，对应 providers 的 key
+  providers:
+    anthropic:
+      base_url: ""                      # 留空使用 Claude CLI 默认端点
+      auth_token: ""                    # 留空使用 Claude CLI 本地认证
+      model: "sonnet"                   # 默认模型别名或完整 ID
+    # bailian:
+    #   base_url: "https://coding.dashscope.aliyuncs.com/apps/anthropic"
+    #   auth_token: "sk-xxx"
+    #   model: "qwen-plus"
 
 session:
   worker_idle_timeout_minutes: 30       # Worker 空闲超时，触发 session 归档
+  probe:
+    enabled: false                      # 群聊中是否启用响应探测
 
 cleanup:
   attachments_retention_days: 7         # session 归档后附件保留天数
@@ -60,7 +72,7 @@ cleanup:
 
 heartbeat:
   enabled: false                        # 是否开启内置 heartbeat
-  interval_minutes: 720                 # 触发间隔（分钟）
+  interval_minutes: 30                  # 触发间隔（分钟）
   prompt_file: "HEARTBEAT.md"           # workspace 根目录中的 prompt 文件
 
 web_search:
@@ -93,6 +105,7 @@ web_search:
 |------|------|------|
 | `permission_mode` | string | `acceptEdits` 自动接受文件编辑；`bypassPermissions` 跳过所有确认（高风险） |
 | `model` | string | 可选，原样传给 claude CLI 的 `--model` |
+| `provider` | string | 可选，指定使用 `claude.providers` 中的哪个提供商，空则使用 `claude.default_provider` |
 | `allowed_tools` | []string | 限制 Claude 可用工具，建议按最小权限原则配置。联网检索默认优先使用 workspace 的 `bin/web-search`，不是依赖内置 `WebSearch` |
 
 ### `server`
@@ -107,12 +120,15 @@ web_search:
 |------|------|------|
 | `timeout_minutes` | int | 单次执行超时 |
 | `max_turns` | int | Claude 最大对话轮数 |
+| `default_provider` | string | 默认模型提供商 key，对应 `providers` 中的键名 |
+| `providers` | map[string]ProviderConfig | 可用的模型提供商配置，支持 Anthropic、百炼等第三方端点 |
 
 ### `session`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `worker_idle_timeout_minutes` | int | Worker 空闲多久后自动归档 session |
+| `probe.enabled` | bool | 群聊中未直接 @bot 时，是否启用 probe 判断是否响应 |
 
 ### `cleanup`
 
@@ -132,6 +148,14 @@ web_search:
 | `notify_target_type` | string | 通知目标类型：`p2p` / `group`，空表示不发送通知 |
 | `notify_target_id` | string | 通知目标 ID |
 
+### `claude.providers`
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `base_url` | string |  provider API 端点；Anthropic 默认可留空，百炼等需显式填写 |
+| `auth_token` | string | provider API 密钥；Anthropic 默认可留空，复用 Claude CLI 认证 |
+| `model` | string | 该 provider 的默认模型，支持别名（sonnet / opus / haiku）或完整模型 ID |
+
 ### `web_search`
 
 | 字段 | 类型 | 说明 |
@@ -139,6 +163,12 @@ web_search:
 | `tavily_api_key` | string | Tavily API Key；留空则自动降级到 DuckDuckGo |
 | `tavily_base_url` | string | Tavily API 地址 |
 | `timeout_seconds` | int | workspace 本地搜索脚本的 HTTP 超时 |
+
+### 其他顶层字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `language` | string | workspace 模板语言，`zh` 或 `en`，默认 `zh` |
 
 ---
 
