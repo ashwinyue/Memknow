@@ -141,7 +141,6 @@ func (e *InteractiveExecutor) reapDeadSessions() {
 	}
 }
 
-// interactiveSession mirrors cc-connect's claudeSession.
 type interactiveSession struct {
 	cmd     *exec.Cmd
 	cancel  context.CancelFunc
@@ -399,7 +398,6 @@ func (is *interactiveSession) resetTurnState() {
 	is.finishReason = ""
 }
 
-// readLoop is heavily inspired by cc-connect/session.go.
 func (is *interactiveSession) readLoop(stdout io.ReadCloser, stderrBuf *bytes.Buffer) {
 	defer func() {
 		is.alive.Store(false)
