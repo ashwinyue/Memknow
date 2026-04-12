@@ -210,7 +210,7 @@ func (w *Worker) process(ctx context.Context, msg *feishu.IncomingMessage) {
 	cardMsgID, streamer, result, err := w.executeWithStreaming(ctx, sess, msg)
 	if err != nil {
 		if errors.Is(err, context.Canceled) {
-			w.replyCanceled(ctx, msg, cardMsgID)
+			w.replyCanceled(ctx, msg, cardMsgID, result.Text)
 			return
 		}
 		w.replyError(ctx, msg, cardMsgID, err)
@@ -734,8 +734,11 @@ func (w *Worker) replyError(ctx context.Context, msg *feishu.IncomingMessage, ca
 	_, _ = w.sender.SendText(ctx, msg.ReceiveID, msg.ReceiveType, reply)
 }
 
-func (w *Worker) replyCanceled(ctx context.Context, msg *feishu.IncomingMessage, cardMsgID string) {
+func (w *Worker) replyCanceled(ctx context.Context, msg *feishu.IncomingMessage, cardMsgID string, partialText string) {
 	reply := "已停止当前执行。"
+	if partialText != "" {
+		reply = partialText + "\n\n〔已停止〕"
+	}
 	if cardMsgID != "" {
 		_ = w.sender.UpdateCard(ctx, cardMsgID, reply)
 		return

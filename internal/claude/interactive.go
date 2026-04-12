@@ -372,7 +372,17 @@ func (is *interactiveSession) collectResult(ctx context.Context, onProgress func
 			return result, nil
 
 		case <-ctx.Done():
-			return result, ctx.Err()
+			is.stop()
+			for {
+				select {
+				case _, ok := <-is.events:
+					if !ok {
+						return result, ctx.Err()
+					}
+				case <-is.done:
+					return result, ctx.Err()
+				}
+			}
 		}
 	}
 }
