@@ -1,102 +1,44 @@
 # Windows 兼容性说明
 
-本项目已完全支持 Windows 平台（Windows 10/11）。
+> **Windows 仅通过 WSL2 支持**。本项目依赖 `syscall.Flock`、systemd / launchd 脚本以及大量 Unix Shell 工具，不支持 Windows 原生运行。
 
-## 已解决的兼容性问题
+## 支持方案
 
-### 1. 进程组设置
+### WSL2（推荐）
 
-**问题**：原代码使用 Unix 特有的 `syscall.SysProcAttr{Setpgid: true}`，Windows 不支持。
+在 WSL2 Ubuntu/Debian 环境中可获得与 Linux 完全一致的兼容性：
+- 所有 Shell 脚本（`daemon-linux.sh`、`setup_lark_bot.sh` 等）无需修改即可运行
+- systemd 服务可用
+- `flock(2)` 文件锁、`lsof` 等 Unix 工具齐全
 
-**解决方案**：使用条件编译，创建平台特定文件：
-- `internal/claude/executor_unix.go` - Unix/Linux/macOS 平台
-- `internal/claude/executor_windows.go` - Windows 平台
-
-### 2. 文件锁机制
-
-**问题**：原 skill 文档使用 Linux 的 `flock` 命令，Windows 上不可用。
-
-**解决方案**：创建跨平台 `filelock` 工具（基于 `github.com/gofrs/flock`）：
-- 位置：`cmd/filelock/`
-- 支持：Linux、macOS、Windows
-- 用法：`filelock <lock-file> <timeout-seconds> <command> [args...]`
-
-## 跨平台特性
-
-以下组件已确认跨平台兼容：
-
-- ✅ **路径处理**：全部使用 `filepath.Join()`，自动适配 Windows 路径分隔符
-- ✅ **SQLite**：使用 CGO-free 的 `glebarez/sqlite`，无需 C 编译器
-- ✅ **数据库**：`sqlite` (CGO-free) 原生支持 Windows
-- ✅ **定时任务**：`gocron/v2` 纯 Go 实现
-- ✅ **飞书 SDK**：`oapi-sdk-go/v3` 跨平台
-- ✅ **Claude CLI**：Go 的 `exec` 包自动处理 `.exe` 后缀
-
-## Windows 部署建议
-
-### 推荐环境
-
-1. **Git Bash**（推荐）：运行 Shell 脚本（`setup_lark_bot.sh`）
-2. **WSL2**：完整 Linux 环境，兼容性最佳
-3. **PowerShell**：可直接运行 `go` 命令和 `filelock` 工具
-
-### 构建与运行
-
-```powershell
-# 克隆项目
-git clone https://github.com/ashwinyue/Memknow.git
-cd Memknow
-
-# 构建（包含 filelock 工具）
-go build ./...
-
-# 运行
-go run ./cmd/server -config config.yaml
+```bash
+# 在 WSL2 中按 Linux 方式构建和运行
+go build -o server ./cmd/server
+./daemon-linux.sh install --binary ./server --config ./config.yaml
 ```
 
-### filelock 工具使用
+### Git Bash / PowerShell / Windows CMD
+
+**不支持**。以下原因导致原生 Windows 无法正常运行：
+- `start.sh`、`daemon-*.sh` 等管理脚本依赖 Unix 特有命令（`flock`、`lsof`、`systemctl` / `launchctl`）
+- `cmd/server` 使用 `syscall.Flock` 实现单例锁，Windows 上无法编译
+- `daemon-linux.sh` 与 `daemon-mac.sh` 均通过 `uname -s` 主动拒绝非目标平台
+
+## 跨平台工具
+
+项目中唯一支持原生 Windows 编译的组件是 `cmd/filelock`（基于 `github.com/gofrs/flock`），它是为 workspace skill 文档示例提供的跨平台文件锁工具。但**该工具仅用于 skill 示例**，不能使服务端在 Windows 原生运行。
 
 ```powershell
-# 构建 filelock
+# filelock 示例（PowerShell）
 go build ./cmd/filelock
-
-# 使用示例（PowerShell）
 .\filelock.exe C:\temp\.lock 10 powershell -Command "Add-Content -Path 'C:\temp\data.txt' -Value 'new line'"
-
-# 使用示例（Git Bash）
-./filelock /c/temp/.lock 10 bash -c "echo 'new line' >> /c/temp/data.txt"
 ```
 
-## 已知限制
+## 条件编译说明
 
-1. **Shell 脚本**：`setup_lark_bot.sh` 需要在 Git Bash 或 WSL2 中运行
-2. **lark-cli**：飞书操作依赖宿主机已安装并完成 `lark-cli config init`；若使用 user 身份资源，还需额外执行 `lark-cli auth login`
+代码库中存在少数 `//go:build windows` 文件（如 `internal/claude/executor_windows.go`），这些仅用于保证 `go build ./...` 在 Windows 上**编译通过**，不代表服务端可以在 Windows 原生运行。
 
-## 测试状态
+## 注意事项
 
-- ✅ 编译通过：`go build ./...`
-- ✅ 测试通过：`go test ./...`
-- ✅ 跨平台构建标签正确应用
-- ✅ filelock 工具在 Windows 上正常工作
-
-## 技术细节
-
-### 条件编译
-
-使用 Go 的 build tags 实现平台特定代码：
-
-```go
-//go:build unix
-// 仅在 Unix/Linux/macOS 上编译
-
-//go:build windows
-// 仅在 Windows 上编译
-```
-
-### 文件锁实现
-
-`filelock` 工具使用 `github.com/gofrs/flock`，底层实现：
-- **Unix/Linux**：`flock(2)` 系统调用
-- **Windows**：`LockFileEx` Win32 API
-
-两者语义一致，确保跨平台行为统一。
+- 若使用 `lark-cli`，请在 WSL2 内安装并执行
+- 所有守护进程管理请统一使用 `daemon-linux.sh`（WSL2 内）

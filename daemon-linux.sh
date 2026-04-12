@@ -82,6 +82,12 @@ system_systemd_dir() {
 detect_systemd_mode() {
     if systemctl --user daemon-reload >/dev/null 2>&1; then
         echo "user"
+    elif [[ -n "${WSL_DISTRO_NAME:-}" ]] || grep -qi microsoft /proc/version 2>/dev/null; then
+        echo "检测到 WSL2 环境但未启用 systemd 支持。请按以下步骤启用：" >&2
+        echo "  1. 创建 /etc/wsl.conf 并写入 [boot] systemd=true" >&2
+        echo "  2. 在 PowerShell 中执行: wsl --shutdown" >&2
+        echo "  3. 重新进入 WSL2 后重试" >&2
+        exit 1
     else
         echo "system"
     fi

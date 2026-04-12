@@ -153,4 +153,15 @@ make daemon
 make daemon-status
 ```
 
+**Linux systemd 开机自启**
+
+```bash
+make build
+make daemon-install   # 安装并启动服务
+make daemon-status    # 查看运行状态
+make daemon-stop      # 停止服务
+make daemon-restart   # 重启服务
+make daemon-uninstall # 卸载服务
+```
+
 服务启动后，在飞书中向机器人发消息即可开始对话。
