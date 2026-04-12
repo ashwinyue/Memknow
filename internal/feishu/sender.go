@@ -15,7 +15,8 @@ import (
 const (
 	feishuCardMaxRunes = 8000
 	feishuThinkingText = "Thinking..."
-	feishuBusyReaction = "Typing"
+	feishuBusyReaction = "OK"
+	feishuDoneReaction = "DONE"
 )
 
 var feishuCardHeadingPrefix = regexp.MustCompile(`(?m)^#{1,6}\s+(.+)$`)
@@ -284,25 +285,26 @@ func (s *Sender) AddProcessingReaction(ctx context.Context, messageID string) (s
 	return "", nil
 }
 
-// RemoveProcessingReaction removes a previously added busy reaction by reaction_id.
-func (s *Sender) RemoveProcessingReaction(ctx context.Context, messageID, reactionID string) error {
+// AddDoneReaction adds a DONE emoji reaction to signal processing completion.
+func (s *Sender) AddDoneReaction(ctx context.Context, messageID string) error {
 	messageID = strings.TrimSpace(messageID)
-	reactionID = strings.TrimSpace(reactionID)
-	if messageID == "" || reactionID == "" {
+	if messageID == "" {
 		return nil
 	}
 
-	req := larkim.NewDeleteMessageReactionReqBuilder().
+	req := larkim.NewCreateMessageReactionReqBuilder().
 		MessageId(messageID).
-		ReactionId(reactionID).
+		Body(larkim.NewCreateMessageReactionReqBodyBuilder().
+			ReactionType(larkim.NewEmojiBuilder().EmojiType(feishuDoneReaction).Build()).
+			Build()).
 		Build()
 
-	resp, err := s.client.Im.MessageReaction.Delete(ctx, req)
+	resp, err := s.client.Im.MessageReaction.Create(ctx, req)
 	if err != nil {
-		return fmt.Errorf("remove reaction: %w", err)
+		return fmt.Errorf("add done reaction: %w", err)
 	}
 	if !resp.Success() {
-		return fmt.Errorf("remove reaction API error: code=%d msg=%s", resp.Code, resp.Msg)
+		return fmt.Errorf("add done reaction API error: code=%d msg=%s", resp.Code, resp.Msg)
 	}
 	return nil
 }

@@ -150,8 +150,7 @@ func (s *compactCardStreamer) renderFinalWithProgress(finalText string) string {
 	}
 
 	var b strings.Builder
-	b.WriteString("✅ **Done**")
-	b.WriteString("\n\nRecent progress:\n")
+	b.WriteString("Recent progress:\n")
 	for i, entry := range s.entries {
 		b.WriteString("**")
 		b.WriteString(entry.title)

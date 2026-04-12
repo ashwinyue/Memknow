@@ -59,7 +59,7 @@ type sender interface {
 	UpdateCard(ctx context.Context, messageID string, text string) error
 	SendText(ctx context.Context, receiveID string, receiveIDType string, text string) (string, error)
 	AddProcessingReaction(ctx context.Context, messageID string) (string, error)
-	RemoveProcessingReaction(ctx context.Context, messageID, reactionID string) error
+	AddDoneReaction(ctx context.Context, messageID string) error
 }
 
 type scheduleManager interface {
@@ -177,17 +177,12 @@ func (w *Worker) process(ctx context.Context, msg *feishu.IncomingMessage) {
 	}
 
 	// Add processing reaction as early feedback right after commands are handled.
-	reactionID := ""
-	if rid, rerr := w.sender.AddProcessingReaction(ctx, msg.MessageID); rerr != nil {
-		slog.Warn("add processing reaction", "err", rerr)
-	} else {
-		reactionID = rid
+	if _, err := w.sender.AddProcessingReaction(ctx, msg.MessageID); err != nil {
+		slog.Warn("add processing reaction", "err", err)
 	}
 	defer func() {
-		if reactionID != "" {
-			if err := w.sender.RemoveProcessingReaction(ctx, msg.MessageID, reactionID); err != nil {
-				slog.Warn("remove processing reaction", "err", err)
-			}
+		if err := w.sender.AddDoneReaction(ctx, msg.MessageID); err != nil {
+			slog.Warn("add done reaction", "err", err)
 		}
 	}()
 

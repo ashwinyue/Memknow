@@ -365,7 +365,7 @@ func (s *testSender) SendText(_ context.Context, _, _ string, text string) (stri
 func (s *testSender) AddProcessingReaction(context.Context, string) (string, error) {
 	return "reaction-1", nil
 }
-func (s *testSender) RemoveProcessingReaction(context.Context, string, string) error { return nil }
+func (s *testSender) AddDoneReaction(context.Context, string) error { return nil }
 
 type streamSender struct {
 	thinkingIDs []string
@@ -394,7 +394,7 @@ func (s *streamSender) SendText(_ context.Context, _, _ string, text string) (st
 func (s *streamSender) AddProcessingReaction(context.Context, string) (string, error) {
 	return "reaction-1", nil
 }
-func (s *streamSender) RemoveProcessingReaction(context.Context, string, string) error {
+func (s *streamSender) AddDoneReaction(context.Context, string) error {
 	return nil
 }
 
