@@ -129,7 +129,6 @@ var (
 )
 
 // sanitizeFTS5Query sanitizes user input for safe use in FTS5 MATCH queries.
-// Strategy copied from Hermes hermes_state.py.
 func sanitizeFTS5Query(query string) string {
 	if strings.TrimSpace(query) == "" {
 		return ""
