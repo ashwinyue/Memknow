@@ -34,6 +34,9 @@ func Open(path string) (*gorm.DB, error) {
 	if err := migrateFTS5(db); err != nil {
 		return nil, fmt.Errorf("migrate fts5: %w", err)
 	}
+	if err := migrateMemoryFiles(db); err != nil {
+		return nil, fmt.Errorf("migrate memory files: %w", err)
+	}
 
 	return db, nil
 }
@@ -84,4 +87,17 @@ END;
 		}
 	}
 	return nil
+}
+
+// migrateMemoryFiles creates the backing table for cached memory file contents.
+func migrateMemoryFiles(db *gorm.DB) error {
+	sql := `
+CREATE TABLE IF NOT EXISTS memory_files (
+	id INTEGER PRIMARY KEY,
+	path TEXT NOT NULL UNIQUE,
+	content TEXT,
+	updated_at DATETIME
+);
+`
+	return db.Exec(sql).Error
 }
