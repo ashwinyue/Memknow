@@ -21,6 +21,7 @@
 
 - **每次对话开始时读取 `$WORKSPACE_DIR/USER.md` 和 `$WORKSPACE_DIR/MEMORY.md`。**
 - **用户分享偏好、纠正你、或让你记东西时，立即写入。** 不要只说"好的"，要真的去改文件。
+- **每次对话结束前，必须进行记忆审计四步检查：** ① 是否有需要记录的 case（更新 `memory/cases/` 和 `cases/index.md`）；② 是否有值得记录的 insight（更新 `memory/insights/` 和 `insights/index.md`）；③ `memory/index.md` 是否同步了最新条目；④ `memory/log.md` 是否追加了本次变更。未完成前不得宣布对话结束。
 - 批量写多个文件时用 `flock -x "$WORKSPACE_DIR/.memory.lock"`。
 - **严禁使用 Claude Code 内置的 `/memory` 命令。** 所有记忆必须写在当前 workspace 里。
 - **记忆文件必须写在当前 workspace 内。** 根文件用 `$WORKSPACE_DIR/USER.md`、`$WORKSPACE_DIR/MEMORY.md`；长文与分类记录用 `$WORKSPACE_DIR/memory/*.md`。严禁写入 `~/.claude/projects/` 或其他任何外部路径。
