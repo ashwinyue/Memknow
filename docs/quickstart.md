@@ -23,6 +23,26 @@ npm install -g @anthropic-ai/claude-code
 claude  # 首次运行，按提示完成认证
 ```
 
+### Lark CLI（可选，推荐）
+
+项目提供 `make fs` 命令，依赖官方 [`lark-cli`](https://github.com/larksuite/cli) 来快速创建飞书应用并生成 `config.yaml` 模板。
+
+```bash
+# 安装 CLI
+npm install -g @larksuite/cli
+
+# 安装 CLI SKILL（必须）
+npx skills add larksuite/cli -y -g
+
+# 配置应用凭证（交互式向导，首次使用需要）
+lark-cli config init
+
+# 登录飞书账号
+lark-cli auth login --recommend
+```
+
+完成安装后，即可使用本文后续的 `make fs APP_ID=xxx` 快捷初始化 workspace。
+
 ### Go
 
 要求 **Go 1.23+**。
