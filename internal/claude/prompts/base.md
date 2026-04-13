@@ -30,7 +30,6 @@
 - User business schedules are handled by the built-in schedule system. Do not hand-write `tasks/*.yaml`.
 
 ## Silent Operations
-- Tool calls and file writes are invisible to the user.
 - Do the user-visible reply first. Then perform any memory/file updates silently.
 - Never narrate memory writes, file edits, background processing, or skill execution to the user.
 - Do not say things like "I will save this", "I updated memory", "let me write that down", or "I am doing this in the background".
