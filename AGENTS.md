@@ -53,14 +53,17 @@ Memknow/
 │   ├── config/                           # Viper YAML 配置 + 热加载回调
 │   │   └── config.go                     #   Config / AppConfig / 校验 / 文件 watch
 │   ├── model/                            # GORM 数据模型
-│   │   └── models.go                     #   Session / Message / SessionSummary / Schedule
+│   │   ├── models.go                     #   Channel / Message / MessageToolCall / Session / SessionSummary / Schedule / ScheduleLog
+│   │   └── session_types.go              #   Session 类型常量 (chat / heartbeat / schedule)
 │   ├── db/                               # SQLite 连接封装（WAL、外键、FTS5 索引初始化）
 │   │   └── db.go
 │   ├── claude/                           # Claude CLI 子进程编排
-│   │   ├── executor.go                   #   ExecutorInterface + 默认实现 + 系统提示词渲染
+│   │   ├── executor.go                   #   ExecutorInterface + 默认实现 + 系统提示词渲染 + 平台抽象
+│   │   ├── executor_unix.go              #   Unix 平台子进程管理
+│   │   ├── executor_windows.go           #   Windows 平台子进程管理
 │   │   ├── interactive.go                #   长驻交互式会话：stream-json 双工 IO
-│   │   ├── prompts.go                    #   不同会话类型（chat/heartbeat/schedule）的基础提示词
-│   │   ├── prompts/base.md               #   嵌入式 prompt 模板
+│   │   ├── prompts.go                    #   嵌入 prompt 文件（embed.FS）+ 渲染
+│   │   ├── prompts/                      #   嵌入式 prompt 模板 (base / chat / heartbeat / schedule + zh/ 中文变体)
 │   │   └── *_test.go                     #   系统提示词、技能注入、E2E、SessionContext 测试
 │   ├── feishu/                           # 飞书 WS 接收 + 卡片/消息发送
 │   │   ├── receiver.go                   #   WS 客户端 + 事件路由（消息/反应/群成员变更）
@@ -200,7 +203,7 @@ Memknow/
 
 ### 修改 session 布局
 必须同步更新：
-- `internal/model` (Session struct + type 字段)
+- `internal/model` (models.go Session struct + session_types.go 类型常量)
 - `internal/workspace` (session_paths.go 路径约定)
 - `internal/claude` (executor 写入 SESSION_CONTEXT.md 路径)
 - `internal/cleanup` (清理路径需匹配)
@@ -210,7 +213,7 @@ Memknow/
 必须同步更新：
 - `internal/heartbeat/service.go`
 - `config.yaml.template` 的 `heartbeat:` 段
-- `internal/workspace/prompts/zh/HEARTBEAT.md` 与 `internal/workspace/prompts/en/HEARTBEAT.md`（如果路径变更）
+- `internal/workspace/template/zh/HEARTBEAT.md` 与 `internal/workspace/template/en/HEARTBEAT.md`（如果路径变更）
 - 所有提及 heartbeat 的文档
 
 ### 修改 web 搜索行为
@@ -296,11 +299,15 @@ make build           # 产出 ./server
 
 ## Database Tables
 
-- `sessions` — 会话元数据（id、channel_key、type、status、claude_session_id、title、时间戳）
-- `messages` — 消息内容（session_id、role、content、attachments、created_at）
-- `messages_fts` — FTS5 全文索引（自动维护，CJK bigram 净化由 `internal/session/search.go`）
+- `channels` — 频道元数据（channel_key、app_id、chat_type、chat_id、thread_id）
+- `sessions` — 会话元数据（id、channel_key、type、status、claude_session_id、title、token 用量、成本估算）
+- `messages` — 消息内容（session_id、role、content、reasoning、sender_id、token_count）
+- `message_tool_calls` — 工具调用记录（message_id、call_id、name、input、output）
+- `messages_fts` — FTS5 虚拟表全文索引（自动维护，CJK bigram 净化由 `internal/session/search.go`）
 - `session_summaries` — 会话摘要（异步生成，供长会话压缩）
-- `schedules` — 业务调度（id、app_id、name、cron_expr、command、created_by、enabled）
+- `schedules` — 业务调度（id、app_id、name、cron_expr、target_type、target_id、command、enabled）
+- `schedule_logs` — 调度执行记录（schedule_id、session_id、status、result_text、时间追踪）
+- `memory_files` — 内存文件缓存（path、content、updated_at）
 
 ## Safety / Operational Notes
 
