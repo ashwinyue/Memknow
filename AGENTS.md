@@ -51,16 +51,26 @@ Memknow/
 │   └── filelock/main.go                  # 独立工具：以 flock 包装任意命令的文件互斥执行器
 ├── internal/
 │   ├── config/                           # Viper YAML 配置 + 热加载回调
-│   │   └── config.go                     #   Config / AppConfig / 校验 / 文件 watch
-│   ├── model/                            # GORM 数据模型
-│   │   └── models.go                     #   Session / Message / SessionSummary / Schedule
+│   │   ├── config.go                     #   Config / AppConfig / 校验 / 文件 watch
+│   │   └── *_test.go
+│   ├── model/                            # GORM 数据模型 + 类型常量
+│   │   ├── models.go                     #   Session / Message / SessionSummary / Schedule
+│   │   └── session_types.go              #   SessionType 常量 + NormalizeSessionType
 │   ├── db/                               # SQLite 连接封装（WAL、外键、FTS5 索引初始化）
-│   │   └── db.go
+│   │   ├── db.go
+│   │   └── *_test.go
 │   ├── claude/                           # Claude CLI 子进程编排
 │   │   ├── executor.go                   #   ExecutorInterface + 默认实现 + 系统提示词渲染
+│   │   ├── executor_unix.go              #   Unix 平台实现（PTY 等）
+│   │   ├── executor_windows.go           #   Windows 平台实现
 │   │   ├── interactive.go                #   长驻交互式会话：stream-json 双工 IO
 │   │   ├── prompts.go                    #   不同会话类型（chat/heartbeat/schedule）的基础提示词
-│   │   ├── prompts/base.md               #   嵌入式 prompt 模板
+│   │   ├── prompts/                      #   嵌入式 prompt 模板
+│   │   │   ├── base.md                   #     共享基础 prompt
+│   │   │   ├── chat.md                   #     普通对话
+│   │   │   ├── heartbeat.md              #     系统维护
+│   │   │   ├── schedule.md               #     定时任务
+│   │   │   └── zh/                       #     中文 prompt 变体
 │   │   └── *_test.go                     #   系统提示词、技能注入、E2E、SessionContext 测试
 │   ├── feishu/                           # 飞书 WS 接收 + 卡片/消息发送
 │   │   ├── receiver.go                   #   WS 客户端 + 事件路由（消息/反应/群成员变更）
@@ -74,23 +84,29 @@ Memknow/
 │   │   ├── retriever.go                  #   FTS5 + 摘要混合检索 + 评分融合
 │   │   ├── search.go / search_format.go  #   FTS5 query 净化（含 CJK bigram） + 结果分组
 │   │   ├── summary.go                    #   异步会话摘要（由 claude 重新调用）
-│   │   └── memory.go                     #   工作区级 MEMORY.md 注入
+│   │   ├── memory.go                     #   工作区级 MEMORY.md 注入
+│   │   └── *_test.go
 │   ├── heartbeat/                        # 内置 heartbeat（系统维护循环）
-│   │   └── service.go                    #   定时跑 HEARTBEAT.md prompt + 配置 watch 重启
+│   │   ├── service.go                    #   定时跑 HEARTBEAT.md prompt + 配置 watch 重启
+│   │   └── *_test.go
 │   ├── schedule/                         # 业务调度（自然语言创建/管理）
 │   │   ├── service.go                    #   gocron + 持久化 + ManageFromMessage 自然语言命令
-│   │   └── intent_parser.go              #   用 claude LLM 解析「每小时提醒喝水」类输入到结构化 Intent
+│   │   ├── intent_parser.go              #   用 claude LLM 解析「每小时提醒喝水」类输入到结构化 Intent
+│   │   └── *_test.go
 │   ├── cleanup/                          # 附件清理服务（cron 触发）
-│   │   └── service.go                    #   按保留天数清理 workspace/.../attachments/
+│   │   ├── service.go                    #   按保留天数清理 workspace/.../attachments/
+│   │   └── *_test.go
 │   ├── websearch/                        # 本地联网搜索（Tavily / DuckDuckGo），CLI 形式给 claude 调用
 │   │   ├── cli.go                        #   web-search 子命令入口（由主二进制 dispatch）
-│   │   └── search.go                     #   provider 选择 + 超时控制
+│   │   ├── search.go                     #   provider 选择 + 超时控制
+│   │   └── *_test.go
 │   └── workspace/                        # workspace 目录初始化（每 app 一个）
 │       ├── init.go                       #   从 embed FS 复制模板 + 写 .search.json + 生成 bin/web-search
 │       ├── prompts.go                    #   渲染基础 prompt（注入路径变量）
 │       ├── session_paths.go              #   session/heartbeat/schedule 目录约定
 │       ├── template/                     #   嵌入式默认模板：SOUL/IDENTITY/USER/MEMORY/HEARTBEAT + skills/ + zh/en/
-│       └── template_variants/            #   备选模板：product-assistant、code-review
+│       ├── template_variants/            #   备选模板：product-assistant、code-review
+│       └── *_test.go
 ├── workspaces/                           # 运行时 workspace 实例（gitignored）
 ├── tests/                                # 集成 / 端到端测试
 ├── docs/                                 # 设计文档
@@ -210,7 +226,7 @@ Memknow/
 必须同步更新：
 - `internal/heartbeat/service.go`
 - `config.yaml.template` 的 `heartbeat:` 段
-- `internal/workspace/prompts/zh/HEARTBEAT.md` 与 `internal/workspace/prompts/en/HEARTBEAT.md`（如果路径变更）
+- `internal/workspace/template/zh/HEARTBEAT.md` 与 `internal/workspace/template/en/HEARTBEAT.md`（如果路径变更）
 - 所有提及 heartbeat 的文档
 
 ### 修改 web 搜索行为
