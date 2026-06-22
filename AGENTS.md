@@ -53,15 +53,18 @@ Memknow/
 │   ├── config/                           # Viper YAML 配置 + 热加载回调
 │   │   └── config.go                     #   Config / AppConfig / 校验 / 文件 watch
 │   ├── model/                            # GORM 数据模型
-│   │   └── models.go                     #   Session / Message / SessionSummary / Schedule
+│   │   ├── models.go                     #   Channel / Session / Message / SessionSummary / Schedule
+│   │   └── session_types.go              #   SessionType 常量 + NormalizeSessionType()
 │   ├── db/                               # SQLite 连接封装（WAL、外键、FTS5 索引初始化）
 │   │   └── db.go
 │   ├── claude/                           # Claude CLI 子进程编排
 │   │   ├── executor.go                   #   ExecutorInterface + 默认实现 + 系统提示词渲染
+│   │   ├── executor_unix.go              #   Unix 平台子进程管理
+│   │   ├── executor_windows.go           #   Windows 平台子进程管理
 │   │   ├── interactive.go                #   长驻交互式会话：stream-json 双工 IO
-│   │   ├── prompts.go                    #   不同会话类型（chat/heartbeat/schedule）的基础提示词
-│   │   ├── prompts/base.md               #   嵌入式 prompt 模板
-│   │   └── *_test.go                     #   系统提示词、技能注入、E2E、SessionContext 测试
+│   │   ├── prompts.go                    #   嵌入 prompts/ 目录下的 Markdown 模板
+│   │   ├── prompts/                      #   Prompt 模板（base/chat/heartbeat/schedule + zh 中文变体）
+│   │   └── *_test.go                     #   系统提示词、技能注入、E2E 测试
 │   ├── feishu/                           # 飞书 WS 接收 + 卡片/消息发送
 │   │   ├── receiver.go                   #   WS 客户端 + 事件路由（消息/反应/群成员变更）
 │   │   ├── sender.go                     #   卡片 SendThinking / UpdateCard / Reaction / SendText / SendCard
@@ -210,7 +213,7 @@ Memknow/
 必须同步更新：
 - `internal/heartbeat/service.go`
 - `config.yaml.template` 的 `heartbeat:` 段
-- `internal/workspace/prompts/zh/HEARTBEAT.md` 与 `internal/workspace/prompts/en/HEARTBEAT.md`（如果路径变更）
+- `internal/workspace/template/zh/HEARTBEAT.md` 与 `internal/workspace/template/en/HEARTBEAT.md`（如果路径变更）
 - 所有提及 heartbeat 的文档
 
 ### 修改 web 搜索行为
